@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // Relative asset URLs: works on Vercel (root) and GitHub Pages (/interactive-introduction/).
+  base: "./",
   build: {
     target: "es2022",
     chunkSizeWarningLimit: 1600,
