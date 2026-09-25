@@ -55,12 +55,12 @@ function makeNoise(ctx: AudioContext, seconds: number, kind: "white" | "pink" | 
 }
 
 /**
- * Pre-rendered rain texture: thousands of individual droplets (short, decaying,
- * randomly pitched resonances with a tiny noise "tick") over a soft noise bed.
- * Drops are written with wrap-around so the buffer loops seamlessly — no periodic
- * modulation, so no "helicopter" flutter.
+ * Pre-rendered droplet layer. Each droplet is a few milliseconds of *noise*
+ * (not a tone) shaped by a fast decay and a gentle resonant band-pass at a random
+ * centre — that's what a raindrop impact actually sounds like. Written with
+ * wrap-around so the loop is seamless; no periodic modulation anywhere.
  */
-async function makeRain(ctx: AudioContext, seconds: number, o: { rate: number; fLo: number; fHi: number; decayMs: [number, number]; bed: number; tick: number; seed: number }): Promise<AudioBuffer> {
+async function makeDroplets(ctx: BaseAudioContext, seconds: number, o: { rate: number; fLo: number; fHi: number; decayMs: [number, number]; q: number; seed: number }): Promise<AudioBuffer> {
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * seconds);
   const buf = ctx.createBuffer(2, len, sr);
@@ -71,43 +71,41 @@ async function makeRain(ctx: AudioContext, seconds: number, o: { rate: number; f
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  // Bed: low-passed white noise, very quiet.
-  let bl = 0;
-  let br = 0;
-  for (let i = 0; i < len; i++) {
-    bl += (rnd() * 2 - 1 - bl) * 0.35;
-    br += (rnd() * 2 - 1 - br) * 0.35;
-    L[i] = bl * o.bed;
-    R[i] = br * o.bed;
-  }
   const drops = Math.floor(o.rate * seconds);
   for (let d = 0; d < drops; d++) {
-    // Yield regularly so rendering the texture never blocks a frame.
-    if (d % 400 === 399) await new Promise((r) => setTimeout(r, 0));
+    if (d % 300 === 299) await new Promise((r) => setTimeout(r, 0));
     const start = Math.floor(rnd() * len);
-    const f = o.fLo * Math.pow(o.fHi / o.fLo, rnd());
+    const fc = o.fLo * Math.pow(o.fHi / o.fLo, rnd());
     const decay = (o.decayMs[0] + rnd() * (o.decayMs[1] - o.decayMs[0])) / 1000;
-    const amp = Math.pow(rnd(), 2.2) * 0.6 + 0.02;
+    const amp = Math.pow(rnd(), 3) * 0.9 + 0.05; // most drops soft, a few louder
     const pan = rnd();
-    const n = Math.floor(decay * sr * 4);
-    const w = (2 * Math.PI * f) / sr;
-    const chirp = 1 + (rnd() - 0.3) * 0.5; // droplets ring up slightly in pitch
-    let phase = rnd() * 6.28;
+    // RBJ band-pass coefficients.
+    const w0 = (2 * Math.PI * fc) / sr;
+    const alpha = Math.sin(w0) / (2 * o.q);
+    const a0 = 1 + alpha;
+    const b0 = alpha / a0;
+    const b2 = -alpha / a0;
+    const a1 = (-2 * Math.cos(w0)) / a0;
+    const a2 = (1 - alpha) / a0;
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    const n = Math.floor(decay * sr * 5);
     for (let k = 0; k < n; k++) {
-      const t = k / sr;
-      const env = Math.exp(-t / decay);
-      phase += w * (1 + (chirp - 1) * (k / n));
-      let v = Math.sin(phase) * env * amp;
-      if (k < 40) v += (rnd() * 2 - 1) * o.tick * amp * (1 - k / 40); // impact tick
+      const env = Math.exp(-k / (decay * sr));
+      const x = (rnd() * 2 - 1) * env;
+      const y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1;
+      x1 = x;
+      y2 = y1;
+      y1 = y;
+      const v = y * amp;
       const idx = (start + k) % len;
-      L[idx] += v * (1 - pan * 0.7);
-      R[idx] += v * (0.3 + pan * 0.7);
+      L[idx] += v * (1.15 - pan);
+      R[idx] += v * (0.15 + pan);
     }
   }
-  // Normalise.
   let peak = 0;
   for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
-  const k = peak > 0 ? 0.9 / peak : 1;
+  const k = peak > 0 ? 0.8 / peak : 1;
   for (let i = 0; i < len; i++) {
     L[i] *= k;
     R[i] *= k;
@@ -147,6 +145,10 @@ export class AudioEngine {
 
   // Continuous layers
   private rainFar!: { gain: GainNode; filter: BiquadFilterNode };
+  private rainGust!: GainNode;
+  private gustTimer = 0;
+  /** Resolves when the droplet textures are rendered (used by offline previews). */
+  rainReady: Promise<void>[] = [];
   private rainNear!: { gain: GainNode; filter: BiquadFilterNode };
   private cityBed!: { gain: GainNode; filter: BiquadFilterNode };
   private hum!: { gain: GainNode; filter: BiquadFilterNode };
@@ -193,8 +195,9 @@ export class AudioEngine {
     this.master.gain.value = this.muted ? 0 : 0.9;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14;
-    comp.ratio.value = 3;
-    comp.attack.value = 0.01;
+    comp.ratio.value = 6;
+    comp.knee.value = 6;
+    comp.attack.value = 0.003;
     comp.release.value = 0.3;
     this.master.connect(comp).connect(ctx.destination);
 
@@ -228,49 +231,61 @@ export class AudioEngine {
       return src;
     };
 
-    // Rain far: a dense wash of distant droplets on roofs and streets.
+    // Rain is three layers:
+    //  wash   — soft band-limited noise (the "shhh" of rain everywhere), with slow
+    //           random gusts rather than any periodic modulation;
+    //  patter — distant droplets (short filtered noise impacts), quiet;
+    //  glass  — sparse, duller taps on the window right in front of you.
     {
+      const wash = loop(this.noise.pink);
       const hp = ctx.createBiquadFilter();
       hp.type = "highpass";
-      hp.frequency.value = 180;
+      hp.frequency.value = 300;
       const filter = ctx.createBiquadFilter();
       filter.type = "lowpass";
-      filter.frequency.value = 3200;
-      filter.Q.value = 0.3;
+      filter.frequency.value = 2600;
+      filter.Q.value = 0.4;
+      const gust = ctx.createGain();
+      gust.gain.value = 1;
+      this.rainGust = gust;
       const gain = ctx.createGain();
       gain.gain.value = 0;
-      hp.connect(filter).connect(gain).connect(this.ambience);
+      wash.connect(hp).connect(filter).connect(gust).connect(gain).connect(this.ambience);
       this.rainFar = { gain, filter };
-      // Rendering the droplet textures takes a moment: do it after the click
-      // handler returns so the first tap never feels sluggish.
-      void makeRain(ctx, 7, { rate: 2400, fLo: 900, fHi: 5200, decayMs: [1.2, 4], bed: 0.35, tick: 0.6, seed: 11 }).then((b) => {
-        const far = ctx.createBufferSource();
-        far.buffer = b;
-        far.loop = true;
-        far.connect(hp);
-        far.start(ctx.currentTime, Math.random() * 7);
-      });
+      // Distant patter joins the same bus, well under the wash.
+      const patterGain = ctx.createGain();
+      patterGain.gain.value = 0.35;
+      patterGain.connect(filter);
+      this.rainReady.push(
+        makeDroplets(ctx, 6.1, { rate: 900, fLo: 1200, fHi: 4200, decayMs: [1.2, 3.5], q: 1.2, seed: 11 }).then((b) => {
+          const src = ctx.createBufferSource();
+          src.buffer = b;
+          src.loop = true;
+          src.connect(patterGain);
+          src.start(0, Math.random() * 6);
+        }),
+      );
     }
-    // Rain near: individual, sparser drops tapping on the glass right in front of you.
     {
       const filter = ctx.createBiquadFilter();
-      filter.type = "highshelf";
-      filter.frequency.value = 5000;
-      filter.gain.value = -3;
+      filter.type = "lowpass";
+      filter.frequency.value = 4500;
       const gain = ctx.createGain();
       gain.gain.value = 0;
       filter.connect(gain).connect(this.ambience);
-      void makeRain(ctx, 5.3, { rate: 260, fLo: 1400, fHi: 7000, decayMs: [2, 9], bed: 0.04, tick: 1.4, seed: 29 }).then((b) => {
-        const near = ctx.createBufferSource();
-        near.buffer = b;
-        near.loop = true;
-        near.connect(filter);
-        near.start(ctx.currentTime, Math.random() * 5);
-      });
       const wet = ctx.createGain();
-      wet.gain.value = 0.15;
+      wet.gain.value = 0.12;
       gain.connect(wet).connect(this.reverbSend);
       this.rainNear = { gain, filter };
+      this.rainReady.push(
+        makeDroplets(ctx, 5.3, { rate: 70, fLo: 700, fHi: 2600, decayMs: [3, 9], q: 2.2, seed: 29 }).then((b) => {
+          const src = ctx.createBufferSource();
+          src.buffer = b;
+          src.loop = true;
+          src.connect(filter);
+          src.start(0, Math.random() * 5);
+        }),
+      );
     }
     // City bed: brown noise rumble.
     {
@@ -344,9 +359,9 @@ export class AudioEngine {
   /** intensity 0..1, proximity 0..1 (close to glass). */
   setRain(intensity: number, proximity = 0, time = 2): void {
     if (!this.ctx) return;
-    this.ramp(this.rainFar.gain.gain, 0.06 + intensity * 0.22, time);
-    this.ramp(this.rainFar.filter.frequency, 1800 + intensity * 2400 + proximity * 3000, time);
-    this.ramp(this.rainNear.gain.gain, intensity * (0.05 + proximity * 0.25), time);
+    this.ramp(this.rainFar.gain.gain, 0.05 + intensity * 0.16, time);
+    this.ramp(this.rainFar.filter.frequency, 1600 + intensity * 1400 + proximity * 1200, time);
+    this.ramp(this.rainNear.gain.gain, intensity * (0.04 + proximity * 0.22), time);
   }
 
   setCity(level: number, time = 2): void {
@@ -470,7 +485,7 @@ export class AudioEngine {
     o.stop(t0 + dur + 0.1);
   }
 
-  private noiseBurst(dur: number, opts: { type?: BiquadFilterType; freq?: number; freqEnd?: number; q?: number; gain?: number; delay?: number; attack?: number; wet?: number; kind?: string; bus?: "sfx" | "ambience" } = {}): void {
+  private noiseBurst(dur: number, opts: { type?: BiquadFilterType; freq?: number; freqEnd?: number; q?: number; gain?: number; delay?: number; attack?: number; wet?: number; kind?: string; bus?: "sfx" | "ambience"; smooth?: boolean } = {}): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const t0 = ctx.currentTime + (opts.delay ?? 0);
@@ -483,7 +498,14 @@ export class AudioEngine {
     if (opts.freqEnd) f.frequency.exponentialRampToValueAtTime(opts.freqEnd, t0 + dur);
     f.Q.value = opts.q ?? 1;
     const g = ctx.createGain();
-    this.env(g, t0, opts.attack ?? 0.005, opts.gain ?? 0.2, dur);
+    if (opts.smooth) {
+      // Natural decay: linear rise, then an exponential *approach* to silence
+      // (sounds like a long tail instead of cutting off early).
+      const a = opts.attack ?? 0.005;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(opts.gain ?? 0.2, t0 + a);
+      g.gain.setTargetAtTime(0, t0 + a, dur / 3.5);
+    } else this.env(g, t0, opts.attack ?? 0.005, opts.gain ?? 0.2, dur);
     src.connect(f).connect(g);
     g.connect(opts.bus === "ambience" ? this.ambience : this.sfx);
     if (opts.wet) {
@@ -563,34 +585,44 @@ export class AudioEngine {
   /**
    * Thunder arrives after the flash, like in reality: sound travels ~343 m/s, so
    * the delay grows with distance (compressed a little to keep the pacing).
-   * Close strikes crack first and then roll; distant ones are only a low roll.
+   * It is mixed for small speakers too: most of the energy sits between
+   * ~150 Hz and 1.5 kHz (pure sub-bass is inaudible on phones/laptops).
+   * Routed on the sfx bus so the room "muffle" never swallows it.
    * `distance`: 0 = right outside, 1 = far away.
    */
   thunder(distance = 0.6): void {
+    if (!this.ctx) return;
     const d = Math.max(0, Math.min(1, distance));
     const km = 0.25 + d * 3.5;
     const delay = Math.min(7, (km * 1000) / 343) * 0.6 + 0.15;
     const near = 1 - d;
-    // Crack: bright, very short, only for close strikes.
-    if (near > 0.35) {
-      this.noiseBurst(0.08, { type: "highpass", freq: 1200, gain: 0.35 * near, kind: "white", delay, bus: "ambience", wet: 0.3 });
-      this.noiseBurst(0.35, { type: "bandpass", freq: 900, freqEnd: 300, q: 0.7, gain: 0.3 * near, kind: "pink", delay: delay + 0.03, attack: 0.01, bus: "ambience", wet: 0.5 });
+    const loud = 0.7 + near * 0.8;
+    // Crack + tearing crackle for close strikes.
+    if (near > 0.3) {
+      this.noiseBurst(0.35, { type: "bandpass", freq: 2400, freqEnd: 500, q: 0.5, gain: 1.4 * near, kind: "white", delay, attack: 0.004, wet: 0.5, smooth: true });
+      const clicks = 8 + Math.floor(near * 12);
+      for (let i = 0; i < clicks; i++) {
+        this.noiseBurst(0.05 + Math.random() * 0.06, { type: "bandpass", freq: 700 + Math.random() * 2500, q: 1.2, gain: 0.9 * near * (0.3 + Math.random() * 0.7), kind: "white", delay: delay + 0.02 + Math.random() * 0.6, attack: 0.002, wet: 0.5, smooth: true });
+      }
     }
-    // Roll: several overlapping low bursts at irregular offsets = rumble that tumbles.
+    // Body: the audible "boom", a mid-band sweep downward.
+    this.noiseBurst(2.2 + d, { type: "lowpass", freq: 1600 - d * 800, freqEnd: 200, q: 0.7, gain: 1.6 * loud, kind: "pink", delay: delay + 0.05 + d * 0.2, attack: 0.04 + d * 0.4, wet: 0.7, smooth: true });
+    // Roll: overlapping swells at irregular offsets so it tumbles away.
     const parts = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < parts; i++) {
-      const off = delay + 0.1 + i * (0.35 + Math.random() * 0.7) + d * 0.3;
-      const dur = 1.6 + Math.random() * 2.2 + d * 1.5;
+      const off = delay + 0.5 + i * (0.5 + Math.random() * 0.9) + d * 0.3;
+      const dur = 2 + Math.random() * 2.5 + d * 1.2;
       this.noiseBurst(dur, {
         type: "lowpass",
-        freq: 320 - d * 170 + Math.random() * 80,
-        freqEnd: 60 + Math.random() * 30,
-        gain: (0.55 - i * 0.07) * (0.7 + near * 0.5),
-        attack: 0.08 + d * 0.5 + Math.random() * 0.2,
+        freq: 650 - d * 250 + Math.random() * 250,
+        freqEnd: 150,
+        q: 0.5,
+        gain: (1.5 - i * 0.2) * loud,
+        attack: 0.3 + Math.random() * 0.5,
         kind: "brown",
         delay: off,
-        bus: "ambience",
-        wet: 0.55,
+        wet: 0.7,
+        smooth: true,
       });
     }
   }
@@ -636,6 +668,12 @@ export class AudioEngine {
   /** Periodic scheduling for traffic swells and drips. Call once per frame. */
   update(dt: number): void {
     if (!this.ctx || this.ctx.state !== "running") return;
+    // Rain gusts: irregular, slow swells (never periodic).
+    this.gustTimer -= dt;
+    if (this.gustTimer <= 0) {
+      this.gustTimer = 2.5 + Math.random() * 5;
+      this.ramp(this.rainGust.gain, 0.75 + Math.random() * 0.5, 2 + Math.random() * 2);
+    }
     this.trafficTimer -= dt;
     if (this.trafficTimer <= 0) {
       this.trafficTimer = 5 + Math.random() * 9;
