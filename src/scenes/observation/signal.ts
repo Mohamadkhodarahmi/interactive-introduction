@@ -1,5 +1,5 @@
 import * as THREE from "three/webgpu";
-import { Fn, float, length, max, mrt, smoothstep, uniform, uv, vec4, abs, exp, fract, time } from "three/tsl";
+import { Fn, float, length, mrt, smoothstep, uniform, uv, vec4, abs, exp, fract, time } from "three/tsl";
 import { asV3 } from "../../rendering/materials/tslUtils";
 
 /** "HELLO" in Morse. The signal has been saying it all along. */

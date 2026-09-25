@@ -212,8 +212,8 @@ export class FinalScene extends BaseScene {
       cb.rbox(0.44, 0.52, 0.06, 0.03, fabric, [0, 0.9, 0.25], [-0.1, 0, 0]);
       cb.build(chair);
     }
-    chair.position.set(0.35, 0, -0.55);
-    chair.rotation.y = -0.45;
+    chair.position.set(0.95, 0, -0.5);
+    chair.rotation.y = -0.9;
     scene.add(chair);
 
     // Laptop: base + hinged lid with the screen.

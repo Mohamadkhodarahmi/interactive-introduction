@@ -126,6 +126,10 @@ export class App {
     this.onResize();
 
     this.clock.connect(document);
+    (renderer as unknown as { onDeviceLost: (info: unknown) => void }).onDeviceLost = (info) => {
+      console.warn("[renderer] device lost", info);
+      this.fallbackToWebGL();
+    };
     renderer.setAnimationLoop(this.frame);
     (window as unknown as { __app: unknown }).__app = { ctx: this.ctx, app: this };
     this.dpr.grace(4000);
@@ -181,7 +185,12 @@ export class App {
     for (const s of active) s.beforeRender();
     ui.updateHint(cameras.camera);
     audio.update(dt);
-    post.render();
+    try {
+      post.render();
+      this.frameErrors = 0;
+    } catch (err) {
+      this.onRenderError(err);
+    }
 
     this.statTimer += dt;
     if (this.statTimer > 1) {
@@ -190,6 +199,33 @@ export class App {
       ui.setStat(`${this.ctx.isWebGPU ? "WEBGPU" : "WEBGL2"} · ${this.dpr.fps.toFixed(0)} FPS · DPR ${this.dpr.current.toFixed(2)} · ${this.ctx.quality.level.toUpperCase()}${r.info?.render?.drawCalls ? " · " + r.info.render.drawCalls + " DC" : ""}`);
     }
   };
+
+  private frameErrors = 0;
+
+  /** Repeated render failures on WebGPU → reload once on the WebGL2 backend. */
+  private onRenderError(err: unknown): void {
+    this.frameErrors++;
+    if (this.frameErrors === 1) console.error("[render]", err);
+    if (this.frameErrors > 5) this.fallbackToWebGL();
+  }
+
+  private fallbackToWebGL(): void {
+    const params = new URLSearchParams(location.search);
+    let tried = false;
+    try {
+      tried = sessionStorage.getItem("unknown-system:fallback") === "1";
+      sessionStorage.setItem("unknown-system:fallback", "1");
+    } catch {
+      /* ignore */
+    }
+    if (!this.ctx.isWebGPU || params.has("webgl") || tried) {
+      this.ctx.renderer.setAnimationLoop(null);
+      this.ctx.ui.fatal("RENDER ERROR", "گرافیک این دستگاه به مشکل خورد. صفحه رو دوباره باز کن.");
+      return;
+    }
+    params.set("webgl", "1");
+    location.search = params.toString();
+  }
 
   private activeScenes(): BaseScene[] {
     const list: BaseScene[] = [this.obs];
