@@ -44,19 +44,28 @@ available the instant the user taps «شروع».
 
 ## Rain
 
-Rain is not filtered noise. At unlock (deferred a few ms so the tap stays snappy) two
-seamless loops are rendered from thousands of individual droplets — each a very short,
-randomly pitched resonance with a tiny impact tick, randomly panned — over a quiet noise
-bed. The far loop is dense (roofs/streets), the near loop is sparse and brighter (drops on
-the glass). There is no periodic modulation anywhere, which is what made the earlier
-version sound like a helicopter.
+Three layers, all noise-based (tonal "droplet pings" sounded electronic and harsh):
+
+- **wash** — pink noise band-limited to ~300 Hz–2.6 kHz, the "shhh" of rain, with slow
+  random gusts (new random target every 2.5–7.5 s; never a periodic LFO — a 13 Hz flutter
+  in an early version is what sounded like a helicopter);
+- **patter** — a pre-rendered loop of ~900 distant droplet impacts per second, each a few
+  ms of noise through a soft band-pass, mixed well under the wash;
+- **glass** — sparse (≈70/s), duller taps on the window, louder when you walk up to it.
+
+Measured on an offline render (indoor, powered room): ~−27 dBFS RMS, energy almost all
+below 4 kHz (−31 dB share above 4 kHz), no envelope periodicity.
 
 ## Thunder
 
 `thunder(distance)` is called at the moment of the flash and schedules its own delay from
 the speed of sound (≈343 m/s over 0.25–3.75 km, compressed ×0.6 for pacing, max ≈4.4 s).
-Close strikes add a bright crack; every strike rolls with 3–5 overlapping low bursts at
-irregular offsets so the rumble tumbles instead of fading linearly.
+Close strikes crack and tear (short band-passed noise clicks); every strike has a mid-band
+"boom" sweep (1.6 kHz → 200 Hz, audible on phone/laptop speakers) and 3–5 overlapping
+low swells at irregular offsets with natural exponential tails. It runs on the sfx bus so
+the room muffle never swallows it, and peaks ~12 dB above the rain (measured).
+
+`scripts/audio-preview.mjs` renders the mix offline in Chromium to a WAV for listening.
 
 ## The signal
 
