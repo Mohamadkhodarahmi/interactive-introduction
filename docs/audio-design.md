@@ -16,8 +16,8 @@ available the instant the user taps «شروع».
 ## Signal flow
 
 ```
- rain far (pink noise → HP 250 → LP)  ┐
- rain near (white → BP 3.8k → flutter) ├─ ambience ─ muffle LP ─┐
+ rain far (pre-rendered droplets → HP → LP) ┐
+ rain near (sparse glass taps → shelf)       ├─ ambience ─ muffle LP ─┐
  city bed (brown → LP 380)             │                        │
  traffic swells (scheduled bursts)     │                        ├─ master ─ compressor ─ out
  electrical hum (50/100/150/200/250Hz) ┘                        │
@@ -41,6 +41,22 @@ available the instant the user taps «شروع».
 | Analysis | quiet | quiet | low | medium | `analysis` (bare fifth) + scan |
 | Identity | softer | softer | low | medium | `identity` (F maj7) |
 | Final room | muffled through the window | faint | off | heavy | silence → `final` (G maj9) after the reveal |
+
+## Rain
+
+Rain is not filtered noise. At unlock (deferred a few ms so the tap stays snappy) two
+seamless loops are rendered from thousands of individual droplets — each a very short,
+randomly pitched resonance with a tiny impact tick, randomly panned — over a quiet noise
+bed. The far loop is dense (roofs/streets), the near loop is sparse and brighter (drops on
+the glass). There is no periodic modulation anywhere, which is what made the earlier
+version sound like a helicopter.
+
+## Thunder
+
+`thunder(distance)` is called at the moment of the flash and schedules its own delay from
+the speed of sound (≈343 m/s over 0.25–3.75 km, compressed ×0.6 for pacing, max ≈4.4 s).
+Close strikes add a bright crack; every strike rolls with 3–5 overlapping low bursts at
+irregular offsets so the rumble tumbles instead of fading linearly.
 
 ## The signal
 

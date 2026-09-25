@@ -53,18 +53,21 @@ export class AdaptiveDpr {
     if (this.fps < this.targetFps) {
       this.slow++;
       this.fast = 0;
-      if (this.slow >= 2 && this.current > this.min + 0.01) {
-        this.current = Math.max(this.min, this.current - 0.15);
+      // Each change reallocates every render target, so change rarely, in big steps.
+      if (this.slow >= 3 && this.current > this.min + 0.01) {
+        this.current = Math.max(this.min, this.current - 0.25);
         this.slow = 0;
         this.apply(this.current);
+        this.grace(3000);
       }
     } else if (this.fps > 58) {
       this.fast++;
       this.slow = 0;
-      if (this.fast >= 5 && this.current < ceiling - 0.01) {
+      if (this.fast >= 10 && this.current < ceiling - 0.01) {
         this.current = Math.min(ceiling, this.current + 0.1);
         this.fast = 0;
         this.apply(this.current);
+        this.grace(3000);
       }
     } else {
       this.slow = 0;

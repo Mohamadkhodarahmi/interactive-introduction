@@ -172,7 +172,16 @@ export class App {
     this.play();
   }
 
+  /** Dev/QA: frames that took unusually long, with the story beat they happened in. */
+  hitches: { t: number; ms: number; scene: string }[] = [];
+  private lastFrameAt = 0;
+
   private frame = (): void => {
+    const now = performance.now();
+    if (this.lastFrameAt && now - this.lastFrameAt > 70 && this.hitches.length < 200) {
+      this.hitches.push({ t: Math.round(now), ms: Math.round(now - this.lastFrameAt), scene: this.ctx.store.get().currentScene });
+    }
+    this.lastFrameAt = now;
     this.clock.update();
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
     this.elapsed += dt;

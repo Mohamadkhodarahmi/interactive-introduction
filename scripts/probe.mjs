@@ -17,5 +17,5 @@ page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
 await page.goto(url, { waitUntil: "commit", timeout: 180000 });
 await page.waitForTimeout(+waitMs);
 console.log(await page.evaluate(js));
-console.log(logs.slice(0, 30).join("\n"));
+console.log(logs.filter((l) => !l.includes("Instance") && !l.includes("GL Driver")).slice(0, 40).join("\n"));
 await browser.close();

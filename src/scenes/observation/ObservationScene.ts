@@ -19,6 +19,8 @@ import { screenUV, texture } from "three/tsl";
 import type { N } from "../../rendering/materials/tslUtils";
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+/** Environment reflection strength while the room has no power. */
+const OFFLINE_ENV = 0.12;
 
 const BOOT_LINES = [
   "OBS-07 FIRMWARE 4.1.9",
@@ -125,9 +127,7 @@ export class ObservationScene extends BaseScene {
   door: DoorView = { state: "locked", name: "", since: 0 };
   private rain!: THREE.Sprite;
   private splashes!: THREE.Sprite;
-  private envOffline!: THREE.Texture;
   private envPowered!: THREE.Texture;
-  private envWarm!: THREE.Texture;
   private emergencyU!: { value: number };
   private emergencyOn = 1;
   private dripT = 0;
@@ -165,10 +165,9 @@ export class ObservationScene extends BaseScene {
       floor: 0x050506,
       window: { position: [0, 1.9, -5.0], size: [12, 3], normal: [0, 0, 1], top: 0x0a0d14, bottom: 0x2a2226, intensity: 1 },
     };
-    this.envOffline = buildEnvironment(renderer, {
-      ...envBase,
-      panels: [{ position: [5.9, 2.8, 0.3], size: [0.4, 0.4], normal: [-1, 0, 0], color: 0xff2010, intensity: 2 }],
-    });
+    // One environment for the whole story. Swapping scene.environment forces every
+    // material in the room to rebuild its node graph — that rebuild was the heavy
+    // stall right after "power restored". Lighting changes use intensity instead.
     const ceilingPanels = [-3.15, -1.05, 1.05].flatMap((z) => [-2.2, 2.2].map((x) => ({ position: [x, 3.3, z] as [number, number, number], size: [1.8, 0.3] as [number, number], normal: [0, -1, 0] as [number, number, number], color: 0xffe2c0, intensity: 7 })));
     this.envPowered = buildEnvironment(renderer, {
       ...envBase,
@@ -176,14 +175,8 @@ export class ObservationScene extends BaseScene {
       floor: 0x0e0f10,
       panels: [...ceilingPanels, { position: [0, 1.45, -3.7], size: [2.6, 0.5], normal: [0, 0, 1], color: 0x9fcfff, intensity: 1.5 }],
     });
-    this.envWarm = buildEnvironment(renderer, {
-      ...envBase,
-      wall: 0x1c1a18,
-      floor: 0x0f0e0d,
-      panels: [...ceilingPanels.map((p) => ({ ...p, color: 0xffc890, intensity: 6 })), { position: [5.95, 1.2, 0.3], size: [1.3, 2.3], normal: [-1, 0, 0], color: 0xffa860, intensity: 4 }],
-    });
-    scene.environment = this.envOffline;
-    scene.environmentIntensity = 0.6;
+    scene.environment = this.envPowered;
+    scene.environmentIntensity = OFFLINE_ENV;
 
     this.city = buildCity(quality);
     scene.add(this.city.group);
@@ -229,7 +222,7 @@ export class ObservationScene extends BaseScene {
     this.room.doorScreen.brightness.value = 0.6;
 
     this.onDispose(() => {
-      [this.envOffline, this.envPowered, this.envWarm].forEach((t) => t.dispose());
+      this.envPowered.dispose();
       Object.values(s).forEach((sc) => sc.dispose());
       this.room.doorScreen.dispose();
     });
@@ -256,12 +249,8 @@ export class ObservationScene extends BaseScene {
     L.console.intensity = L.door.intensity = L.doorWash.intensity = L.flash.intensity = 1;
     this.signal.u.visible.value = 1;
     this.signal.light.intensity = 1;
-    for (const env of [this.envPowered, this.envWarm, this.envOffline]) {
-      await this.warm(() => {
-        this.scene.environment = env;
-        this.refreshShadows();
-      });
-    }
+    // A few passes: WebGPU pipeline creation settles asynchronously across frames.
+    for (let i = 0; i < 3; i++) await this.warm(() => this.refreshShadows());
     this.signal.light.intensity = 0;
     this.resetLook();
   }
@@ -285,8 +274,7 @@ export class ObservationScene extends BaseScene {
     glassUniforms.storm.value = 0;
     glassUniforms.reflection.value = 0.04;
     this.fogDensity.value = 0.00055;
-    this.scene.environment = this.envOffline;
-    this.scene.environmentIntensity = 0.6;
+    this.scene.environmentIntensity = OFFLINE_ENV;
     const L = this.room.lights;
     L.city.intensity = 0.9;
     L.ambient.intensity = 0.35;
@@ -478,7 +466,6 @@ export class ObservationScene extends BaseScene {
     await flick(0.3, 90);
     audio.lightOn();
     roomUniforms.ceiling.value = 1;
-    this.scene.environment = this.envPowered;
     gsap.to(this.scene, { environmentIntensity: 0.9, duration: 1.2 });
     L.ceiling.forEach((c) => gsap.to(c, { intensity: 16, duration: 0.3 }));
     gsap.to(L.ambient, { intensity: 0.55, duration: 1.5 });
@@ -673,7 +660,6 @@ export class ObservationScene extends BaseScene {
     glassUniforms.reflection.value = 0.18;
     this.fogDensity.value = 0.0005;
     this.stormLevel = 0;
-    this.scene.environment = this.envPowered;
     this.scene.environmentIntensity = 0.9;
     L.ceiling.forEach((c) => (c.intensity = 12));
     L.ambient.intensity = 0.5;
@@ -713,7 +699,7 @@ export class ObservationScene extends BaseScene {
       gsap.to(s.color, { r: 1.0, g: 0.78, b: 0.55, duration: 3 });
       gsap.to(s, { intensity: 11, duration: 3 });
     });
-    this.scene.environment = this.envWarm;
+    gsap.to(this.scene, { environmentIntensity: 0.75, duration: 3 });
     gsap.to(L.door, { intensity: 3, duration: 3 });
     gsap.to(roomUniforms.doorGlow, { value: 0.25, duration: 3 });
     this.applyAmbience("warm");
