@@ -248,6 +248,7 @@ export class Director {
     this.grade("quiet", 0.01);
     obs.applyAmbience("quiet");
     audio.setPad("analysis", 0.35, 4);
+    ui.systemClear();
     ui.setModules(3);
     ui.systemHead("OBS-07 / CORE");
     await this.fade(0, 2.6);

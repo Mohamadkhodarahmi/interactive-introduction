@@ -77,6 +77,7 @@ export class FinalScene extends BaseScene {
   private laptopSince = 0;
   private typed = 0;
   private revealSince = 0;
+  private revealStart = 0;
   private lights!: { lamp: THREE.SpotLight; bounce: THREE.PointLight; window: THREE.DirectionalLight; screen: THREE.PointLight; ambient: THREE.HemisphereLight };
   private steam!: THREE.Mesh;
   private lid!: THREE.Object3D;
@@ -479,6 +480,7 @@ export class FinalScene extends BaseScene {
     this.laptopState = "reveal";
     this.laptopSince = 0;
     this.revealSince = 0;
+    this.revealStart = performance.now();
     this.typed = 0;
     await wait(3600, signal);
   }
@@ -502,7 +504,8 @@ export class FinalScene extends BaseScene {
     }
     const lines = ["UNKNOWN SYSTEM", "CREATED BY", CREATOR.nameLatin];
     const total = lines.join("").length;
-    this.typed = Math.min(total, Math.floor(this.revealSince * 12));
+    // Wall-clock typing so slow frames never stall the reveal text.
+    this.typed = Math.min(total, Math.floor(((performance.now() - this.revealStart) / 1000) * 12));
     let left = this.typed;
     const y0 = this.laptopState === "hello" ? h * 0.3 : h * 0.4;
     lines.forEach((l, i) => {

@@ -1,1 +1,47 @@
-# interactive-introduction
+# UNKNOWN SYSTEM
+
+A cinematic, mobile-first interactive 3D introduction built with Three.js (WebGPU + TSL,
+WebGL2 fallback), GSAP and Web Audio. You wake up in a dead observation room above a rainy
+city, restore power, follow a strange light, repair a corrupted memory — and the system
+eventually asks your name, opens a door, and the person who built it says hello.
+
+Everything (city, rooms, materials, environment maps, sound) is generated at runtime — no
+models, textures or audio files are downloaded.
+
+## Run
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # type-check + production build into dist/
+npm run preview
+```
+
+Deploys to Vercel as-is (`vercel.json`, framework: vite).
+
+## Make it yours
+
+Edit `src/config.ts`:
+
+- `CREATOR.name` — the name used in «من … هستم».
+- `CREATOR.nameLatin` — shown on the laptop.
+- `CREATOR.contacts` — channels under «راه ارتباطی من» (empty ones are hidden).
+- `CREATOR.inbox.email` — optional. v1 has no backend: if set, a visitor's optional contact
+  opens a pre-filled mail draft; otherwise it's only kept on the visitor's device.
+
+## URL options
+
+- `?quality=low|medium|high` — force a quality level (also in the settings menu).
+- `?webgl` — force the WebGL2 backend.
+- Dev only: `?debug=offline|calm|signal|warm|memory|final&cam=<pose>` jumps to a state.
+
+## QA
+
+```bash
+npm run dev &
+node scripts/playthrough.mjs investigate            # desktop
+node scripts/playthrough.mjs ignore 390 844          # phone viewport
+```
+
+Docs: [`docs/`](docs) — architecture, visual direction, audio design, performance,
+reference analysis. Plan and status: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
