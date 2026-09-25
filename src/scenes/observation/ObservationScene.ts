@@ -321,6 +321,20 @@ export class ObservationScene extends BaseScene {
     this.refreshShadows();
   }
 
+  /** Leaving the room: the signal tone must not follow the player into other scenes. */
+  exit(): void {
+    super.exit();
+    this.silenceSignal();
+  }
+
+  silenceSignal(): void {
+    this.signalAudio.level = 0;
+    this.lastSignalLevel = 0;
+    this.lastGate = 0;
+    this.ctx.audio.signalGate(0);
+    this.ctx.audio.setSignal(0, 0, this.signalAudio.pitch);
+  }
+
   enter(): void {
     super.enter();
     const { cameras, audio } = this.ctx;
@@ -613,6 +627,7 @@ export class ObservationScene extends BaseScene {
   async corrupt(signal?: AbortSignal): Promise<void> {
     const { audio, post, cameras } = this.ctx;
     // Always come back to the console so the corruption is seen on the monitors.
+    this.silenceSignal();
     const move = cameras.current !== "monitor" ? cameras.goTo("monitor", { duration: 2.4, ease: "power2.inOut" }) : Promise.resolve();
     this.view.mode = "corrupt";
     this.view.since = 0;

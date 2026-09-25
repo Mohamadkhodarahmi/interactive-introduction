@@ -112,6 +112,7 @@ export class App {
       await this.obs.preload();
     } catch (err) {
       console.error(err);
+      (window as unknown as { __bootError: string }).__bootError = String((err as Error)?.stack ?? err);
       ui.fatal("SCENE FAILED", "یه مشکلی تو ساختن صحنه پیش اومد. صفحه رو دوباره باز کن.");
       return;
     }

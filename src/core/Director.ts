@@ -232,8 +232,9 @@ export class Director {
         await memory.warm();
       }
     } catch (err) {
-      console.warn("[director] memory scene unavailable", err);
+      console.error("[director] memory scene unavailable", err);
       memory = null;
+      this.memory = null;
     }
     assets.prefetch("final", loadFinal);
     obs.clearCorruption();
@@ -341,7 +342,9 @@ export class Director {
         await final.warm();
       }
     } catch (err) {
-      console.warn("[director] final scene unavailable", err);
+      console.error("[director] final scene unavailable", err);
+      final = null;
+      this.final = null;
     }
     obs.exit();
     interactor.clear();
@@ -365,8 +368,14 @@ export class Director {
       await wait(1600, signal);
       await final.laptopOn(signal);
     } else {
-      this.fade(0, 1.5);
+      // The room couldn't be built (e.g. a stale cached chunk after a redeploy):
+      // stay in the dark and tell the reveal with the system log instead of
+      // leaving the camera parked at the door.
       await ui.say("فکر کنم وقتشه بدونی اینجا واقعاً چیه.");
+      ui.systemHead("", false);
+      await ui.system("UNKNOWN SYSTEM", "warm");
+      await ui.system("CREATED BY", "", { fadePrev: false });
+      await ui.system(CREATOR.nameLatin, "warm", { fadePrev: false });
     }
     store.completeScene("final");
 

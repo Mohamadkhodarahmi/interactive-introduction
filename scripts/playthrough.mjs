@@ -3,8 +3,17 @@ import { chromium } from "playwright-core";
 import fs from "fs";
 const [branch = "investigate", w = "1280", h = "720", out = "/tmp/claude-0/qa"] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required"] });
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: [...(process.env.GPU ? ["--enable-unsafe-webgpu", "--use-webgpu-adapter=swiftshader", "--enable-features=Vulkan"] : []), "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required"] });
 const page = await browser.newPage({ viewport: { width: +w, height: +h }, hasTouch: +w < 600, isMobile: +w < 600 });
+// QA-only: this headless Chromium predates the string form of GPUTextureViewDescriptor.swizzle.
+if (process.env.GPU) await page.addInitScript(() => {
+  if (!self.GPUTexture) return;
+  const orig = GPUTexture.prototype.createView;
+  GPUTexture.prototype.createView = function (d) {
+    if (d && "swizzle" in d) { d = { ...d }; delete d.swizzle; }
+    return orig.call(this, d);
+  };
+});
 const logs = [];
 page.on("console", (m) => { const t = m.text(); if (!t.includes("vite") && !t.includes("GL Driver")) logs.push(`[${m.type()}] ${t.slice(0, 300)}`); });
 page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
@@ -31,7 +40,7 @@ const tapHotspot = async (id, timeout = 60000) => {
 const scene = () => page.evaluate(() => window.__app?.ctx.store.get().currentScene);
 const waitScene = async (s, timeout = 120000) => { const st = Date.now(); while (Date.now() - st < timeout) { if ((await scene()) === s) return; await page.waitForTimeout(400); } throw new Error("scene timeout " + s); };
 try {
-  await page.goto("http://localhost:5173/", { waitUntil: "commit", timeout: 180000 });
+  await page.goto("http://localhost:5173/" + (process.env.Q ? "?quality=" + process.env.Q : ""), { waitUntil: "commit", timeout: 180000 });
   await page.waitForFunction(() => window.__app, null, { timeout: 240000 });
   await page.waitForTimeout(9000);
   await shot("arrival");

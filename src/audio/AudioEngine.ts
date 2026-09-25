@@ -297,7 +297,7 @@ export class AudioEngine {
 
   setSignal(level: number, pan = 0, pitch = 880): void {
     if (!this.ctx) return;
-    this.ramp(this.signal.gain.gain, level * 0.08, 0.8);
+    this.ramp(this.signal.gain.gain, level * 0.045, 0.8);
     this.ramp(this.signal.pan.pan, pan, 0.5);
     this.ramp(this.signal.osc.frequency, pitch, 0.5);
     this.ramp(this.signal.osc2.frequency, pitch * 1.501, 0.5);
@@ -307,7 +307,8 @@ export class AudioEngine {
   signalGate(v: number): void {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    this.signal.gate.gain.setTargetAtTime(v, now, 0.012);
+    // Soft attack/release so the Morse pulses read as tones, not clicks/beeps.
+    this.signal.gate.gain.setTargetAtTime(v, now, 0.03);
   }
 
   setPad(name: keyof typeof CHORDS | string, level = 0.5, fade = 3): void {
