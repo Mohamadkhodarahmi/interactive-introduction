@@ -82,7 +82,7 @@ export class ObservationScene extends BaseScene {
       look: { yaw: 0.5, pitch: 0.3 },
     },
     signal: {
-      position: V(0.5, 1.72, -0.9),
+      position: V(0.1, 1.72, -0.9),
       target: V(-40, 10, -200),
       fov: 42,
       sway: 0.008,
@@ -489,7 +489,9 @@ export class ObservationScene extends BaseScene {
     const { cameras, audio } = this.ctx;
     this.view.mode = "exterior";
     this.view.since = 0;
-    this.poses.window.target = this.signalFar.clone().add(V(0, -20, 0)).multiplyScalar(0.03).add(V(0.2, 1.6, -4));
+    // Stand in the middle of a pane so the line of sight to the light never hits a mullion.
+    this.poses.window.position = V(-0.95, 1.55, -3.95);
+    this.poses.window.target = this.signalFar.clone();
     cameras.goTo("window", { duration: 3.6, ease: "power2.inOut" });
     audio.whoosh(2.4);
     this.applyAmbience("storm");

@@ -48,7 +48,7 @@ allocation-sized buffers (building count) apply on the next load.
 
 - `BaseScene.dispose()` runs registered disposers (render targets, canvas textures, PMREMs)
   then `disposeObject()` over the tree (geometries, materials, textures, shadow maps).
-- Memory and final scenes are disposed on replay and rebuilt when next needed.
+- Memory and final scenes are built once and re-entered on replay (their `enter()` resets them); they share TSL uniform nodes with the observation scene, so they are not disposed mid-session.
 - GSAP tweens are killed on replay; story timers are cleared through `AbortSignal`s.
 
 ## Mobile notes

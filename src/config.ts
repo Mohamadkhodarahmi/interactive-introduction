@@ -18,9 +18,12 @@ export const CREATOR = {
     { label: "Email", value: "", href: "" },
   ] as { label: string; value: string; href: string }[],
   /**
-   * Where a visitor's optional contact goes. v1 has no backend: if `email` is set,
-   * the form opens a pre-filled mail draft the visitor sends themselves; otherwise
-   * the note is only kept on the visitor's device.
+   * Where a visitor's optional contact goes.
+   * - `endpoint`: any URL that accepts a JSON POST — e.g. a Formspree form
+   *   ("https://formspree.io/f/xxxxxxx") or your own Telegram-bot worker.
+   *   Payload: { name, contact, signalChoice, interactionStyle, at }.
+   * - `email`: fallback — opens a pre-filled mail draft the visitor sends.
+   * With neither set, the note is only kept on the visitor's device.
    */
-  inbox: { email: "" },
+  inbox: { endpoint: "", email: "" },
 };

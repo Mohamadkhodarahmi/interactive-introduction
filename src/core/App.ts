@@ -163,7 +163,7 @@ export class App {
     interactor.clear();
     audio.reset();
     audio.setRain(0.4, 0);
-    this.director.disposeExtraScenes();
+    this.director.resetExtraScenes();
     store.reset();
     post.u.glitch.value = 0;
     post.u.warp.value = 0;

@@ -454,6 +454,7 @@ export class FinalScene extends BaseScene {
     this.laptop.power.value = 0;
     this.lid.rotation.x = -0.32;
     this.lights.screen.intensity = 0;
+    this.lights.lamp.intensity = 5;
     post.applyGrade({ exposure: 1.05, saturation: 0.95, bloom: 0.7, vignette: 0.42 });
     (post.u.lift.value as THREE.Color).setRGB(0.012, 0.006, 0.0);
     (post.u.gain.value as THREE.Color).setRGB(1.06, 1.0, 0.92);

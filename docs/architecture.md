@@ -70,7 +70,7 @@ src/
   during the preceding beat, retried on transient failure. If the memory chunk still fails the
   Director restores memory through dialogue; if the final chunk fails the reveal still plays.
 - Replay aborts the running story (`AbortController`), fades out, kills tweens, clears the UI,
-  resets audio and state, **disposes** the memory and final scenes (they are rebuilt next
+  resets audio and state, exits (but keeps) the memory and final scenes (they re-enter and reset next
   time), resets the observation scene's look and starts again.
 
 ## Dev tooling

@@ -48,6 +48,17 @@ export class Director {
   }
 
   /** Dispose lazily-created scenes (used on replay). */
+  /**
+   * On replay the lazily-built scenes are kept and simply re-entered (their
+   * enter() resets them). Disposing them here shared TSL uniform nodes with the
+   * observation scene, which left the WebGPU backend rendering black after replay.
+   */
+  resetExtraScenes(): void {
+    this.memory?.exit();
+    this.final?.exit();
+  }
+
+  /** Full teardown (page unload / never needed for replay). */
   disposeExtraScenes(): void {
     this.memory?.dispose();
     this.final?.dispose();
@@ -382,9 +393,9 @@ export class Director {
       const left = await ui.contactForm("", "تلگرام، اینستاگرام، ایمیل... هر چی راحتی", "بفرست", "رد شدن");
       await ui.clearSay();
       if (left) {
-        this.deliverContact(name, left);
+        const sent = await this.deliverContact(name, left);
         audio.confirm();
-        await ui.say("رسید. ممنون :)");
+        await ui.say(sent ? "رسید. ممنون :)" : "ذخیره شد، ولی الان نرسید... ممنون که گذاشتی :)");
       }
     }
     store.completeScene("contact");
@@ -396,18 +407,48 @@ export class Director {
     await ui.finale("دوباره شروع کن", CREATOR.github ? { label: "GITHUB", href: CREATOR.github } : undefined);
   }
 
-  /** v1 has no backend: keep it on the device, optionally hand it to the visitor's mail app. */
-  private deliverContact(name: string, contact: string): void {
+  /**
+   * Visitor contact: POSTed as JSON to `CREATOR.inbox.endpoint` when configured
+   * (Formspree, a Telegram-bot worker, etc.). Always also kept on the device so
+   * nothing is lost if the request fails; optional mail draft as a last resort.
+   */
+  private async deliverContact(name: string, contact: string): Promise<boolean> {
+    const st = this.ctx.store.get();
+    const payload = {
+      name,
+      contact,
+      signalChoice: st.signalChoice,
+      interactionStyle: st.interactionStyle,
+      at: new Date().toISOString(),
+    };
     try {
-      localStorage.setItem("unknown-system:contact", JSON.stringify({ name, contact, at: new Date().toISOString() }));
+      localStorage.setItem("unknown-system:contact", JSON.stringify(payload));
     } catch {
       /* ignore */
     }
-    const email = CREATOR.inbox.email;
+    const { endpoint, email } = CREATOR.inbox;
+    if (endpoint) {
+      try {
+        const ctl = new AbortController();
+        const timer = window.setTimeout(() => ctl.abort(), 8000);
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+          signal: ctl.signal,
+        });
+        clearTimeout(timer);
+        if (res.ok) return true;
+      } catch (err) {
+        console.warn("[contact] send failed", err);
+      }
+    }
     if (email) {
       const body = encodeURIComponent(`${name}\n${contact}`);
       window.open(`mailto:${email}?subject=${encodeURIComponent("UNKNOWN SYSTEM")}&body=${body}`, "_blank");
+      return true;
     }
+    return false;
   }
 
   /**
