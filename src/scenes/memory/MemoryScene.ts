@@ -72,7 +72,7 @@ export class MemoryScene extends BaseScene {
       fov: 55,
       sway: 0.02,
       look: { yaw: 0.45, pitch: 0.2 },
-      portrait: { position: V(0, 1.7, 7.4), target: V(0, 1.9, 0), fov: 55 },
+      portrait: { position: V(0, 1.8, 8.8), target: V(0, 2.0, 0), fov: 55 },
     },
     memoryEntry: {
       position: V(0, 2.4, 11),
@@ -192,7 +192,7 @@ export class MemoryScene extends BaseScene {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.297), paperMat);
       const a = Math.random() * Math.PI * 2;
       const r = 1.5 + Math.random() * 6;
-      add(p, V(Math.cos(a) * r, 0.6 + Math.random() * 4, Math.sin(a) * r - 1), 0.3);
+      add(p, V(Math.cos(a) * r, 0.6 + Math.random() * 4, Math.min(3, Math.sin(a) * r - 1)), 0.3);
     }
     // Glass shards from the observation window
     const glassMat = new THREE.MeshStandardNodeMaterial({ color: 0x9fb4c8, roughness: 0.05, metalness: 0.9, transparent: true, opacity: 0.35 });
@@ -268,7 +268,7 @@ export class MemoryScene extends BaseScene {
 
     // --- three memory fragments: crystalline shards with a small holographic image inside
     const labels = ["POWER", "SIGNAL", "?"];
-    const homes = [V(-2.2, 1.35, 1.6), V(2.3, 1.6, 1.3), V(0.2, 3.35, 1.0)];
+    const homes = [V(-1.35, 1.25, 1.7), V(1.4, 1.55, 1.5), V(0.15, 3.2, 1.1)];
     for (let i = 0; i < 3; i++) {
       const g = new THREE.Group();
       const glow = uniform(0.6);

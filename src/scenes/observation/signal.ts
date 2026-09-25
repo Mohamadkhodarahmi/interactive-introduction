@@ -64,7 +64,7 @@ export class Signal {
     gate: uniform(0),
     intensity: uniform(1),
     /** Apparent size in radians-ish (scaled by distance). */
-    size: uniform(0.02),
+    size: uniform(0.06),
     color: uniform(new THREE.Color(0.78, 0.93, 1.0)),
   };
   private sprite: THREE.Sprite;
@@ -80,16 +80,17 @@ export class Signal {
       const p = uv().sub(0.5).mul(2);
       const r = length(p);
       const g = u.gate.mul(0.75).add(0.25);
-      const core = exp(r.mul(r).mul(-900)).mul(6);
-      const halo = exp(r.mul(-7)).mul(0.5).mul(g);
-      const streak = exp(abs(p.y).mul(-160)).mul(exp(abs(p.x).mul(-3.5))).mul(0.6).mul(g);
+      const core = exp(r.mul(r).mul(-420)).mul(7);
+      const halo = exp(r.mul(-5)).mul(0.8).mul(g).add(exp(r.mul(-18)).mul(1.4).mul(g));
+      const streak = exp(abs(p.y).mul(-120)).mul(exp(abs(p.x).mul(-2.5))).mul(0.8).mul(g);
       const ringT = fract(time.mul(0.62));
       const ring = smoothstep(float(0.03), float(0.0), abs(r.sub(ringT.mul(0.9)))).mul(float(1).sub(ringT)).mul(0.35).mul(u.gate);
       const a = core.mul(g).add(halo).add(streak).add(ring).mul(u.visible).mul(u.intensity);
-      return vec4(asV3(u.color).mul(a), max(a, float(0)).clamp(0, 1));
+      // Additive with SrcAlpha: keep alpha at 1 so faint halo values aren't squared away.
+      return vec4(asV3(u.color).mul(a), float(1));
     })();
     mat.colorNode = col;
-    mat.mrtNode = mrt({ emissive: vec4(col.xyz.mul(0.5), 1) });
+    mat.mrtNode = mrt({ emissive: vec4(col.xyz.mul(0.9), 1) });
     this.sprite = new THREE.Sprite(mat);
     this.sprite.renderOrder = 4;
     this.sprite.frustumCulled = false;

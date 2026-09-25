@@ -87,6 +87,7 @@ export class ObservationScene extends BaseScene {
       fov: 42,
       sway: 0.008,
       look: { yaw: 0.35, pitch: 0.15 },
+      portrait: { position: V(0.2, 1.95, -2.6), fov: 46 },
     },
     identity: {
       position: V(2.7, 1.62, 1.9),
@@ -282,7 +283,7 @@ export class ObservationScene extends BaseScene {
     this.room.doorLeaf.position.z = DOOR.z;
     this.signal.u.visible.value = 0;
     this.signal.u.intensity.value = 1;
-    this.signal.u.size.value = 0.02;
+    this.signal.u.size.value = 0.06;
     this.signal.setPosition(this.signalFar);
     this.signalLight = 0;
     this.stormLevel = 0;
@@ -474,7 +475,7 @@ export class ObservationScene extends BaseScene {
   async revealSignal(signal?: AbortSignal): Promise<void> {
     const s = this.signal;
     s.setPosition(this.signalFar);
-    s.u.size.value = 0.018;
+    s.u.size.value = 0.06;
     gsap.to(s.u.visible, { value: 1, duration: 2.5, ease: "power2.inOut" });
     this.signalAudio.level = 0.5;
     this.signalAudio.pan = -0.35;
@@ -498,7 +499,7 @@ export class ObservationScene extends BaseScene {
     gsap.to(rainUniforms.intensity, { value: 1, duration: 3 });
     gsap.to(rainUniforms.wind, { value: 0.34, duration: 4 });
     gsap.to(this.fogDensity, { value: 0.0008, duration: 4 });
-    gsap.to(this.signal.u.size, { value: 0.03, duration: 4 });
+    gsap.to(this.signal.u.size, { value: 0.1, duration: 4 });
     gsap.to(this.signal.u.intensity, { value: 1.8, duration: 4 });
     this.signalAudio.level = 0.9;
     this.lightningTimer = 2.5;
@@ -544,7 +545,7 @@ export class ObservationScene extends BaseScene {
     await wait(4200, signal);
     // It returns — just outside the glass.
     this.signal.setPosition(this.signalNear);
-    this.signal.u.size.value = 0.016;
+    this.signal.u.size.value = 0.09;
     this.poses.signal.target = this.signalNear.clone();
     this.poses.signal.position = V(0.1, 1.55, -1.6);
     audio.glitch(0.4);

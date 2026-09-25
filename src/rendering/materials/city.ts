@@ -199,7 +199,7 @@ export function createTrafficMaterial(opts: { roadSpacing: number; extent: numbe
   mat.colorNode = Fn(() => {
     const d = length(uv().sub(0.5)).mul(2);
     const a = smoothstep(float(1), float(0), d).pow(2.2);
-    return vec4(c.mul(strength).mul(a).mul(3.2), a);
+    return vec4(c.mul(strength).mul(a).mul(1.4), float(1));
   })();
   mat.mrtNode = mrt({ emissive: vec4(c.mul(strength).mul(0.4), 1) });
   return mat;
@@ -230,7 +230,7 @@ export function createStreetLampMaterial(opts: { roadSpacing: number; extent: nu
   mat.colorNode = Fn(() => {
     const d = length(uv().sub(0.5)).mul(2);
     const a = smoothstep(float(1), float(0), d).pow(2.5);
-    return vec4(c.mul(a).mul(powered).mul(1.9).mul(cityUniforms.brightness), a);
+    return vec4(c.mul(a).mul(powered).mul(0.8).mul(cityUniforms.brightness), float(1));
   })();
   return mat;
 }
