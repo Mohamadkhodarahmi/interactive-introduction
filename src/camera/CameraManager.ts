@@ -219,7 +219,7 @@ export class CameraManager {
     if (aspect < 1.25) {
       const hRad = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * 1.25);
       const v = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hRad / 2) / aspect));
-      fov = Math.min(v, fov + 30);
+      fov = Math.min(v, fov + 18);
     }
     if (Math.abs(cam.fov - fov) > 0.001) {
       cam.fov = fov;

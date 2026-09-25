@@ -672,7 +672,7 @@ export function buildRoom(profile: QualityProfile, env: THREE.Texture | null, re
   group.add(city, city.target);
   const ambient = new THREE.HemisphereLight(0x1c2330, 0x050506, 0.35);
   group.add(ambient);
-  const emergency = new THREE.PointLight(0xff2a10, 0, 9, 1.6);
+  const emergency = new THREE.PointLight(0xff2a10, 0, 16, 1.3);
   emergency.position.set(R.x1 - 0.4, DOOR.h + 0.3, DOOR.z);
   group.add(emergency);
   const ceiling: THREE.SpotLight[] = [];

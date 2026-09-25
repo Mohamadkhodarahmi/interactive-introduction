@@ -48,7 +48,7 @@ export class ObservationScene extends BaseScene {
       fov: 52,
       sway: 0.01,
       look: { yaw: 0.55, pitch: 0.22 },
-      portrait: { position: V(0.55, 1.6, 3.2), target: V(-0.1, 1.2, -6), fov: 52 },
+      portrait: { position: V(0.35, 1.62, 1.3), target: V(-0.1, 1.3, -6), fov: 52 },
     },
     console: {
       position: V(1.62, 1.5, -1.6),
@@ -57,6 +57,14 @@ export class ObservationScene extends BaseScene {
       sway: 0.006,
       look: { yaw: 0.25, pitch: 0.12 },
       portrait: { position: V(1.9, 1.55, -1.35), target: V(2.45, 0.86, -3.05), fov: 50 },
+    },
+    /** Portrait-friendly framing of the console with the breaker in view. */
+    consoleWide: {
+      position: V(1.6, 1.72, 0.6),
+      target: V(1.9, 0.95, -3.2),
+      fov: 50,
+      sway: 0.008,
+      look: { yaw: 0.5, pitch: 0.2 },
     },
     monitor: {
       position: V(0.0, 1.44, -2.28),
@@ -703,7 +711,7 @@ export class ObservationScene extends BaseScene {
     // Emergency beacon: slow red breathing while offline.
     const em = this.emergencyOn * (0.25 + 0.75 * Math.pow(Math.sin(t * 1.4) * 0.5 + 0.5, 2));
     this.emergencyU.value = em;
-    this.room.lights.emergency.intensity = em * 4.5;
+    this.room.lights.emergency.intensity = em * 14;
 
     // Leak drip: fall + synced sound.
     this.dripT += dt;

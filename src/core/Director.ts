@@ -94,6 +94,8 @@ export class Director {
     ui.hideShade();
     await ui.system("LOCATE MAIN BUS 07 — MANUAL RESET", "warn");
     obs.standby();
+    // Narrow portrait screens can't see the breaker from the arrival framing.
+    if (cameras.aspect < 0.9) cameras.goTo("consoleWide", { duration: 3.5 }).catch(() => undefined);
     const breakerPrompt = performance.now();
     await new Promise<void>((resolve) => {
       let hinted = false;
