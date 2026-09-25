@@ -41,6 +41,8 @@ Edit `src/config.ts`:
 npm run dev &
 node scripts/playthrough.mjs investigate            # desktop
 node scripts/playthrough.mjs ignore 390 844          # phone viewport
+GPU=1 node scripts/playthrough.mjs approach          # real WebGPU backend (SwiftShader)
+Q=high GPU=1 node scripts/playthrough.mjs investigate  # force a quality level
 ```
 
 Docs: [`docs/`](docs) — architecture, visual direction, audio design, performance,

@@ -29,13 +29,17 @@ const clickText = async (text, timeout = 90000) => {
   log("clicked " + text);
 };
 const tapHotspot = async (id, timeout = 60000) => {
+  // Tap, then confirm the hotspot reacted (it gets disabled/removed); retry if the
+  // camera was still moving and the tap missed.
   const start = Date.now();
+  let tapped = false;
   while (Date.now() - start < timeout) {
     const p = await page.evaluate((id) => { const i = window.__app?.ctx.interactor; const h = i?.get(id); return h && h.enabled ? i.screenPos(id) : null; }, id);
-    if (p) { await page.mouse.click(p.x, p.y); log("tapped " + id); return; }
+    if (!p && tapped) { log("tapped " + id); return; }
+    if (p) { await page.mouse.click(p.x, p.y); tapped = true; await page.waitForTimeout(900); continue; }
     await page.waitForTimeout(500);
   }
-  throw new Error("hotspot never enabled: " + id);
+  throw new Error("hotspot never reacted: " + id);
 };
 const scene = () => page.evaluate(() => window.__app?.ctx.store.get().currentScene);
 const waitScene = async (s, timeout = 120000) => { const st = Date.now(); while (Date.now() - st < timeout) { if ((await scene()) === s) return; await page.waitForTimeout(400); } throw new Error("scene timeout " + s); };
