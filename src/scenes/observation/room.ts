@@ -393,8 +393,10 @@ export function buildRoom(profile: QualityProfile, env: THREE.Texture | null, re
   b.box(0.3, 0.16, DOOR.w + 0.24, darkSteel, [R.x1 - 0.1, DOOR.h + 0.08, DOOR.z]);
   b.box(0.36, 0.02, DOOR.w, hazard, [R.x1 - 0.12, 0.01, DOOR.z]);
   const doorMat = createPaintedMaterial(0x3a3f45, 0.55, 0.45, 0.2);
-  const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.07, DOOR.h, DOOR.w), doorMat);
-  doorLeaf.position.set(R.x1 + 0.02, DOOR.h / 2, DOOR.z);
+  // Pocket door: the leaf sits just behind the wall plane (and behind the jambs),
+  // so it slides away *inside* the wall instead of through the frame.
+  const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.07, DOOR.h + 0.08, DOOR.w + 0.12), doorMat);
+  doorLeaf.position.set(R.x1 + 0.1, (DOOR.h + 0.08) / 2, DOOR.z);
   doorLeaf.castShadow = true;
   doorLeaf.receiveShadow = true;
   group.add(doorLeaf);
@@ -420,7 +422,7 @@ export function buildRoom(profile: QualityProfile, env: THREE.Texture | null, re
     warmMat.colorNode = warm;
     warmMat.mrtNode = mrt({ emissive: vec4(warm.mul(0.2), 1) });
     const box = new THREE.Mesh(new THREE.BoxGeometry(2.4, DOOR.h + 0.2, 2.4), warmMat);
-    box.position.set(R.x1 + 1.3, (DOOR.h + 0.2) / 2, DOOR.z);
+    box.position.set(R.x1 + 1.4, (DOOR.h + 0.2) / 2, DOOR.z);
     group.add(box);
   }
   // Door control panel with its own small screen.

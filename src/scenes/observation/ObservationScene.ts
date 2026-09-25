@@ -234,8 +234,46 @@ export class ObservationScene extends BaseScene {
       this.room.doorScreen.dispose();
     });
 
-    // Warm-up compile so the first frame doesn't hitch.
-    await renderer.compileAsync(scene, this.ctx.cameras.camera).catch(() => undefined);
+    await this.prewarm();
+  }
+
+  /**
+   * Compile every variant the story will need *now*, behind the loading veil:
+   * lit + warm environments, shadow depth passes, reflection pass, canvas
+   * texture uploads. Without this the first frame after "power restored"
+   * stalled for about a second while shaders compiled.
+   */
+  private async prewarm(): Promise<void> {
+    const { renderer, post, cameras } = this.ctx;
+    const scene = this.scene;
+    const cam = cameras.camera;
+    cam.position.set(0.6, 1.6, 2.2);
+    cam.lookAt(0, 1.3, -5);
+    cam.updateMatrixWorld();
+    Object.values(this.room.consoleScreens).forEach((s) => s.update(0, true));
+    this.room.doorScreen.update(0, true);
+    const L = this.room.lights;
+    L.ceiling.forEach((c) => (c.intensity = 1));
+    L.console.intensity = L.door.intensity = L.doorWash.intensity = L.flash.intensity = 1;
+    this.signal.u.visible.value = 1;
+    this.signal.light.intensity = 1;
+    post.setScene(scene);
+    const prevFade = post.u.fade.value;
+    post.u.fade.value = 1;
+    for (const env of [this.envPowered, this.envWarm, this.envOffline]) {
+      scene.environment = env;
+      this.refreshShadows();
+      await renderer.compileAsync(scene, cam).catch(() => undefined);
+      this.reflection?.update(scene, cam, [this.room.floor, ...this.room.glass, this.rain, this.splashes]);
+      try {
+        post.render();
+      } catch {
+        /* the real loop will report errors */
+      }
+    }
+    post.u.fade.value = prevFade;
+    this.signal.light.intensity = 0;
+    this.resetLook();
   }
 
   /** Reset to the "offline" initial look. */
@@ -583,7 +621,9 @@ export class ObservationScene extends BaseScene {
 
   /** Memory module corruption: screens break up, lights stutter, image tears. */
   async corrupt(signal?: AbortSignal): Promise<void> {
-    const { audio, post } = this.ctx;
+    const { audio, post, cameras } = this.ctx;
+    // Always come back to the console so the corruption is seen on the monitors.
+    const move = cameras.current !== "monitor" ? cameras.goTo("monitor", { duration: 2.4, ease: "power2.inOut" }) : Promise.resolve();
     this.view.mode = "corrupt";
     this.view.since = 0;
     audio.glitch(1);
@@ -598,6 +638,7 @@ export class ObservationScene extends BaseScene {
     roomUniforms.ceiling.value = 0.8;
     this.room.lights.ceiling.forEach((c) => (c.intensity = 12));
     gsap.to(post.u.glitch, { value: 0.18, duration: 1.2 });
+    await move;
     await wait(900, signal);
   }
 
@@ -679,9 +720,9 @@ export class ObservationScene extends BaseScene {
     audio.doorUnlock();
     await wait(600, signal);
     audio.doorSlide();
-    gsap.to(roomUniforms.doorGlow, { value: 1, duration: 2.2 });
+    gsap.to(roomUniforms.doorGlow, { value: 0.5, duration: 2.2 });
     gsap.to(this.room.lights.door, { intensity: 9, duration: 2.2 });
-    await new Promise<void>((resolve) => gsap.to(this.room.doorLeaf.position, { z: DOOR.z + DOOR.w + 0.05, duration: 2.2, ease: "power2.inOut", onComplete: resolve }));
+    await new Promise<void>((resolve) => gsap.to(this.room.doorLeaf.position, { z: DOOR.z + DOOR.w + 0.2, duration: 2.2, ease: "power2.inOut", onComplete: resolve }));
     this.refreshShadows();
   }
 

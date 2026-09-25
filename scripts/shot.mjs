@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: +w, height: +h }, device
 const logs = [];
 page.on("console", (m) => logs.push(`[${m.type()}] ${m.text()}`));
 page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
-await page.goto(url, { waitUntil: "load" });
+await page.goto(url, { waitUntil: "commit", timeout: 180000 });
 await page.waitForTimeout(+waitMs);
 if (js) { await page.evaluate(js); await page.waitForTimeout(1500); }
 await page.screenshot({ path: out, timeout: 150000 });

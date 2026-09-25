@@ -11,7 +11,7 @@ page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
 const t0 = Date.now();
 const log = (s) => console.log(`${((Date.now() - t0) / 1000).toFixed(0)}s ${s}`);
 let n = 0;
-const shot = async (name) => { await page.screenshot({ path: `${out}/${String(n++).padStart(2, "0")}-${name}.png` }); log("shot " + name); };
+const shot = async (name) => { await page.screenshot({ path: `${out}/${String(n++).padStart(2, "0")}-${name}.png`, timeout: 180000 }); log("shot " + name); };
 const clickText = async (text, timeout = 90000) => {
   const loc = page.locator("button, a", { hasText: text }).first();
   await loc.waitFor({ state: "visible", timeout });
@@ -31,7 +31,8 @@ const tapHotspot = async (id, timeout = 60000) => {
 const scene = () => page.evaluate(() => window.__app?.ctx.store.get().currentScene);
 const waitScene = async (s, timeout = 120000) => { const st = Date.now(); while (Date.now() - st < timeout) { if ((await scene()) === s) return; await page.waitForTimeout(400); } throw new Error("scene timeout " + s); };
 try {
-  await page.goto("http://localhost:5173/", { waitUntil: "load" });
+  await page.goto("http://localhost:5173/", { waitUntil: "commit", timeout: 180000 });
+  await page.waitForFunction(() => window.__app, null, { timeout: 240000 });
   await page.waitForTimeout(9000);
   await shot("arrival");
   await clickText("شروع");

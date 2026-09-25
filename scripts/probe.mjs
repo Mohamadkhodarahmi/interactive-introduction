@@ -5,7 +5,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const logs = [];
 page.on("console", (m) => { if (!m.text().includes("vite")) logs.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
 page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
-await page.goto(url, { waitUntil: "load" });
+await page.goto(url, { waitUntil: "commit", timeout: 180000 });
 await page.waitForTimeout(+waitMs);
 console.log(await page.evaluate(js));
 console.log(logs.slice(0, 30).join("\n"));

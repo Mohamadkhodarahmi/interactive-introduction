@@ -143,7 +143,8 @@ export class CameraManager {
 
   /** Drag-to-look input, in normalised screen units. */
   addLook(dx: number, dy: number): void {
-    this.yawTarget = THREE.MathUtils.clamp(this.yawTarget - dx * 1.4, -this.lookLimit.yaw, this.lookLimit.yaw);
+    // Grab-the-world convention (like 360° photo viewers) on both axes.
+    this.yawTarget = THREE.MathUtils.clamp(this.yawTarget + dx * 1.4, -this.lookLimit.yaw, this.lookLimit.yaw);
     this.pitchTarget = THREE.MathUtils.clamp(this.pitchTarget + dy * 1.0, -this.lookLimit.pitch, this.lookLimit.pitch);
   }
 
