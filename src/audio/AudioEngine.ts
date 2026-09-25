@@ -595,26 +595,20 @@ export class AudioEngine {
     const d = Math.max(0, Math.min(1, distance));
     const km = 0.25 + d * 3.5;
     const delay = Math.min(7, (km * 1000) / 343) * 0.6 + 0.15;
-    const near = 1 - d;
-    const loud = 0.7 + near * 0.8;
-    // Crack + tearing crackle for close strikes.
-    if (near > 0.3) {
-      this.noiseBurst(0.35, { type: "bandpass", freq: 2400, freqEnd: 500, q: 0.5, gain: 1.4 * near, kind: "white", delay, attack: 0.004, wet: 0.5, smooth: true });
-      const clicks = 8 + Math.floor(near * 12);
-      for (let i = 0; i < clicks; i++) {
-        this.noiseBurst(0.05 + Math.random() * 0.06, { type: "bandpass", freq: 700 + Math.random() * 2500, q: 1.2, gain: 0.9 * near * (0.3 + Math.random() * 0.7), kind: "white", delay: delay + 0.02 + Math.random() * 0.6, attack: 0.002, wet: 0.5, smooth: true });
-      }
-    }
+    // Every strike uses the distant, rolling character (a close "crack" sounded
+    // artificial). Distance still sets the delay; loudness varies a little.
+    const tone = Math.max(d, 0.8);
+    const loud = 0.85 + (1 - d) * 0.25;
     // Body: the audible "boom", a mid-band sweep downward.
-    this.noiseBurst(2.2 + d, { type: "lowpass", freq: 1600 - d * 800, freqEnd: 200, q: 0.7, gain: 1.6 * loud, kind: "pink", delay: delay + 0.05 + d * 0.2, attack: 0.04 + d * 0.4, wet: 0.7, smooth: true });
+    this.noiseBurst(2.2 + tone, { type: "lowpass", freq: 1600 - tone * 800, freqEnd: 200, q: 0.7, gain: 1.6 * loud, kind: "pink", delay: delay + 0.05 + tone * 0.2, attack: 0.04 + tone * 0.4, wet: 0.7, smooth: true });
     // Roll: overlapping swells at irregular offsets so it tumbles away.
     const parts = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < parts; i++) {
-      const off = delay + 0.5 + i * (0.5 + Math.random() * 0.9) + d * 0.3;
-      const dur = 2 + Math.random() * 2.5 + d * 1.2;
+      const off = delay + 0.5 + i * (0.5 + Math.random() * 0.9) + tone * 0.3;
+      const dur = 2 + Math.random() * 2.5 + tone * 1.2;
       this.noiseBurst(dur, {
         type: "lowpass",
-        freq: 650 - d * 250 + Math.random() * 250,
+        freq: 650 - tone * 250 + Math.random() * 250,
         freqEnd: 150,
         q: 0.5,
         gain: (1.5 - i * 0.2) * loud,

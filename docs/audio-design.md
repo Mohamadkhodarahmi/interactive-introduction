@@ -60,7 +60,7 @@ below 4 kHz (−31 dB share above 4 kHz), no envelope periodicity.
 
 `thunder(distance)` is called at the moment of the flash and schedules its own delay from
 the speed of sound (≈343 m/s over 0.25–3.75 km, compressed ×0.6 for pacing, max ≈4.4 s).
-Close strikes crack and tear (short band-passed noise clicks); every strike has a mid-band
+Every strike has the same distant, rolling character (a close "crack" sounded artificial): a mid-band
 "boom" sweep (1.6 kHz → 200 Hz, audible on phone/laptop speakers) and 3–5 overlapping
 low swells at irregular offsets with natural exponential tails. It runs on the sfx bus so
 the room muffle never swallows it, and peaks ~12 dB above the rain (measured).
