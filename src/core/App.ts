@@ -35,7 +35,7 @@ export class App {
   async start(): Promise<void> {
     const ui = new UI();
     const assets = new AssetManager();
-    ui.setProgress(0.1);
+    ui.setProgress(0.12, "starting renderer");
 
     let rendererInfo;
     try {
@@ -46,7 +46,7 @@ export class App {
       return;
     }
     const { renderer, isWebGPU } = rendererInfo;
-    ui.setProgress(0.3);
+    ui.setProgress(0.3, isWebGPU ? "webgpu online" : "webgl online");
 
     try {
       const stored = localStorage.getItem("unknown-system:quality");
@@ -107,7 +107,8 @@ export class App {
     const fontLoad = assets.fonts();
     this.obs = new ObservationScene(this.ctx);
     this.scenes.push(this.obs);
-    ui.setProgress(0.45);
+    ui.setProgress(0.45, "building the city");
+    this.obs.onProgress = (p, label) => ui.setProgress(p, label);
     try {
       await this.obs.preload();
     } catch (err) {
@@ -116,9 +117,9 @@ export class App {
       ui.fatal("SCENE FAILED", "یه مشکلی تو ساختن صحنه پیش اومد. صفحه رو دوباره باز کن.");
       return;
     }
-    ui.setProgress(0.9);
+    ui.setProgress(0.92, "loading fonts");
     await fontLoad;
-    ui.setProgress(1);
+    ui.setProgress(1, "ready");
 
     this.director = new Director(this.ctx, this.obs);
     window.addEventListener("resize", this.onResize);

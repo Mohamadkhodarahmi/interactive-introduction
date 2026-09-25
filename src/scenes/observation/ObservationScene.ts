@@ -236,6 +236,9 @@ export class ObservationScene extends BaseScene {
    * texture uploads. Without this the first frame after "power restored"
    * stalled for about a second while shaders compiled.
    */
+  /** Loader hook (set by App before preload). */
+  onProgress?: (p: number, label?: string) => void;
+
   private async prewarm(): Promise<void> {
     const { cameras } = this.ctx;
     const cam = cameras.camera;
@@ -250,7 +253,12 @@ export class ObservationScene extends BaseScene {
     this.signal.u.visible.value = 1;
     this.signal.light.intensity = 1;
     // A few passes: WebGPU pipeline creation settles asynchronously across frames.
-    for (let i = 0; i < 3; i++) await this.warm(() => this.refreshShadows());
+    for (let i = 0; i < 3; i++) {
+      this.onProgress?.(0.58 + i * 0.11, `compiling shaders ${i + 1}/3`);
+      // Let the loader paint the new label before the (blocking) compile.
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      await this.warm(() => this.refreshShadows());
+    }
     this.signal.light.intensity = 0;
     this.resetLook();
   }

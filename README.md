@@ -6,7 +6,12 @@ city, restore power, follow a strange light, repair a corrupted memory — and t
 eventually asks your name, opens a door, and the person who built it says hello.
 
 Everything (city, rooms, materials, environment maps, sound) is generated at runtime — no
-models, textures or audio files are downloaded.
+models, textures or audio files are downloaded. The only images are the teaser loader
+(`public/og.jpg`, `teaser-*.jpg` — real frames of the experience), which is inline in
+`index.html` so it paints before the ~300 kB (gzip) JS bundle arrives and keeps phones busy
+with a preview while shaders compile. Its animations are CSS transform/opacity only, so they
+keep running while the main thread is blocked, and it is removed from the DOM once the
+stage is revealed.
 
 ## Run
 

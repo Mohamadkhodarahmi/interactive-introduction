@@ -219,6 +219,24 @@ body {
   direction: rtl;
   width: 100%;
 }
+.src-link {
+  flex-basis: 100%;
+  text-align: center;
+  direction: ltr;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  text-decoration: none;
+  padding: 4px 0;
+  pointer-events: auto;
+}
+.src-link:hover,
+.src-link:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
 .actions.column {
   flex-direction: column;
   align-items: stretch;

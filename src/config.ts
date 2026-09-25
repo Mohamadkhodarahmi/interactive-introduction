@@ -8,6 +8,8 @@ export const CREATOR = {
   /** Shown on the laptop screen (monospace, uppercase). */
   nameLatin: "MOHAMAD KHODARAHMI",
   github: "https://github.com/Mohamadkhodarahmi",
+  /** This project's public source, linked on the final screen. */
+  source: "https://github.com/Mohamadkhodarahmi/interactive-introduction",
   /**
    * Contact channels shown at the end (in this order). Links open in a new tab;
    * t.me links open the Telegram app directly on phones.

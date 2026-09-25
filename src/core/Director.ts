@@ -403,8 +403,9 @@ export class Director {
     // ================================================================ FINAL STATE
     store.set({ currentScene: "end" });
     await ui.say("خب... مأموریت انجام شد.");
-    await ui.say("مرسی که تا آخرش اومدی :)", { keep: true });
-    await ui.finale("دوباره شروع کن", CREATOR.github ? { label: "GITHUB", href: CREATOR.github } : undefined);
+    await ui.say("مرسی که تا آخرش اومدی :)");
+    await ui.say("کد این پروژه بازه؛ اگه دوست داری ببینی چطوری ساخته شده، اینجاست.", { keep: true });
+    await ui.finale("دوباره شروع کن", { label: "SOURCE · GITHUB", href: CREATOR.source, caption: CREATOR.source.replace("https://", "") });
   }
 
   /**

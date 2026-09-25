@@ -86,6 +86,10 @@ try {
   await shot("contact");
   log("contact links: " + (await page.evaluate(() => [...document.querySelectorAll(".card a")].map((a) => a.href).join(" "))));
   await clickText("ادامه");
+  await page.locator(".src-link").waitFor({ state: "visible", timeout: 60000 });
+  await page.waitForTimeout(1500);
+  await shot("finale");
+  log("source link: " + (await page.evaluate(() => document.querySelector(".src-link")?.href)));
   await clickText("دوباره شروع کن", 60000);
   await shot("end");
   await page.waitForTimeout(8000);

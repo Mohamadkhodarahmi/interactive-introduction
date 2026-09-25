@@ -51,6 +51,8 @@ export class UI {
   private statEl: HTMLElement;
   private veil: HTMLElement;
   private bootBar: HTMLElement;
+  private bootLabel: HTMLElement | null = null;
+  private bootPct: HTMLElement | null = null;
   private flashEl: HTMLElement;
   private proj = new THREE.Vector3();
   signal?: AbortSignal;
@@ -103,13 +105,22 @@ export class UI {
     settingsBtn.addEventListener("click", () => this.menu.classList.toggle("open"));
     this.statEl = h("div", "stat", this.menu);
 
-    this.veil = h("div", "veil");
-    document.body.appendChild(this.veil);
-    const boot = h("div", "boot", this.veil);
-    const bootLabel = h("div", "", boot);
-    bootLabel.textContent = "establishing link";
-    const bar = h("div", "bar", boot);
-    this.bootBar = h("i", "", bar);
+    // The teaser loader is inline in index.html so it paints before the JS arrives.
+    const loader = document.getElementById("loader");
+    if (loader) {
+      this.veil = loader;
+      this.bootBar = loader.querySelector<HTMLElement>(".ld-bar i")!;
+      this.bootLabel = loader.querySelector<HTMLElement>(".ld-label");
+      this.bootPct = loader.querySelector<HTMLElement>(".ld-pct");
+    } else {
+      this.veil = h("div", "veil");
+      document.body.appendChild(this.veil);
+      const boot = h("div", "boot", this.veil);
+      const bootLabel = h("div", "", boot);
+      bootLabel.textContent = "establishing link";
+      const bar = h("div", "bar", boot);
+      this.bootBar = h("i", "", bar);
+    }
 
     this.flashEl = h("div", "flash");
     document.body.appendChild(this.flashEl);
@@ -121,14 +132,24 @@ export class UI {
 
   // ------------------------------------------------------------ loading / veil
 
-  setProgress(p: number): void {
-    this.bootBar.style.transform = `scaleX(${Math.max(0, Math.min(1, p))})`;
+  setProgress(p: number, label?: string): void {
+    const v = Math.max(0, Math.min(1, p));
+    this.bootBar.style.transform = `scaleX(${v})`;
+    if (this.bootPct) this.bootPct.textContent = `${Math.round(v * 100)}%`;
+    if (label && this.bootLabel) this.bootLabel.textContent = label;
   }
 
   async revealStage(duration = 1600): Promise<void> {
     this.veil.style.transitionDuration = `${duration}ms`;
     this.veil.classList.add("hidden");
+    this.veil.removeAttribute("aria-busy");
     await wait(duration);
+    // Drop the teaser (images + endless CSS animations) so it costs nothing while playing.
+    if (this.veil.classList.contains("loader")) {
+      this.veil.classList.remove("loader");
+      this.veil.innerHTML = "";
+      this.bootLabel = this.bootPct = null;
+    }
   }
 
   async veilIn(duration = 1200, color = "#030405"): Promise<void> {
@@ -387,7 +408,7 @@ export class UI {
   }
 
   /** Final buttons: replay + optional link. Resolves on replay. */
-  async finale(replay: string, link?: { label: string; href: string }): Promise<void> {
+  async finale(replay: string, link?: { label: string; href: string; caption?: string }): Promise<void> {
     this.clearActions();
     const b = h("button", "btn primary", this.actions);
     b.textContent = replay;
@@ -401,6 +422,13 @@ export class UI {
       a.style.fontFamily = "var(--mono)";
       a.style.fontSize = "12px";
       a.style.letterSpacing = "0.14em";
+      if (link.caption) {
+        const c = h("a", "src-link", this.actions);
+        c.textContent = link.caption;
+        c.href = link.href;
+        c.target = "_blank";
+        c.rel = "noopener noreferrer";
+      }
     }
     const p = new Promise<void>((resolve) => b.addEventListener("click", async () => (await this.resolveButtons(b), resolve()), { once: true }));
     await this.showButtons();
