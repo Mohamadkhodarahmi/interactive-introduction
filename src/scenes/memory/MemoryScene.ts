@@ -26,6 +26,11 @@ import {
   step,
   normalize,
   transformNormalToView,
+  cameraPosition,
+  pow,
+  clamp,
+  screenUV,
+  texture,
 } from "three/tsl";
 import { BaseScene } from "../../core/BaseScene";
 import type { AppContext } from "../../core/AppContext";
@@ -34,6 +39,7 @@ import { wait } from "../../core/Timeline";
 import { Batch } from "../../rendering/geo";
 import { createMetalMaterial, createPaintedMaterial, ripples } from "../../rendering/materials/surfaces";
 import { Screen, clear, text } from "../../rendering/Screen";
+import { PlanarReflection } from "../../rendering/PlanarReflection";
 import type { SignalChoice } from "../../state/ExperienceState";
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -95,6 +101,8 @@ export class MemoryScene extends BaseScene {
   private dust!: THREE.Sprite;
   private lights!: { key: THREE.PointLight; fill: THREE.HemisphereLight; core: THREE.PointLight };
   private restoredCount = 0;
+  private reflection: PlanarReflection | null = null;
+  private water!: THREE.Mesh;
   private coreMode: "idle" | "replay" | "done" = "idle";
   private coreSince = 0;
   private choice: SignalChoice = "investigate";
@@ -121,7 +129,19 @@ export class MemoryScene extends BaseScene {
     water.colorNode = vec3(0.01, 0.012, 0.014);
     const rp = ripples(vec2(positionWorld.x, positionWorld.z), float(1.4), float(0.35));
     water.normalNode = transformNormalToView(normalize(vec3(rp.x.mul(0.8), 1, rp.y.mul(0.8))));
+    if (quality.level !== "low") {
+      this.reflection = new PlanarReflection(renderer, 0.001, quality.level === "high" ? 0.5 : 0.35);
+      const tex = this.reflection.target.texture;
+      const off = rp.mul(0.04);
+      const viewDir = normalize(cameraPosition.sub(positionWorld));
+      const fres = float(0.03).add(float(0.97).mul(pow(float(1).sub(clamp(viewDir.y, 0, 1)), float(5))));
+      const refl = texture(tex, screenUV.flipX().add(off)).rgb.mul(fres.mul(0.9).add(0.12));
+      water.emissiveNode = refl;
+      water.mrtNode = mrt({ emissive: vec4(refl.mul(0.15), 1) });
+      this.onDispose(() => this.reflection?.dispose());
+    }
     const floorMesh = new THREE.Mesh(new THREE.CircleGeometry(16, 48), water);
+    this.water = floorMesh;
     floorMesh.rotation.x = -Math.PI / 2;
     floorMesh.receiveShadow = true;
     scene.add(floorMesh);
@@ -312,14 +332,31 @@ export class MemoryScene extends BaseScene {
     // --- light: cold key from above, fill, core glow
     const key = new THREE.PointLight(0x9fc4e0, 140, 22, 1.7);
     key.position.set(1.5, 6, 2);
-    key.castShadow = quality.shadows;
-    if (key.castShadow) {
-      key.shadow.mapSize.set(quality.shadowMapSize / 2, quality.shadowMapSize / 2);
-      key.shadow.bias = -0.001;
-    }
+    // Point-light shadows cost six renders a frame — the key stays shadowless.
     const fill = new THREE.HemisphereLight(0x2a3a4c, 0x080808, 0.9);
     const coreLight = new THREE.PointLight(0xbfe0ff, 3, 8, 1.8);
     coreLight.position.set(0, 2.1, 0.8);
+    // Pool of cold light around the core + flickering service strips on the piers.
+    const pool = new THREE.SpotLight(0xb8d4ea, 260, 14, 0.55, 0.7, 1.4);
+    pool.position.set(0, 8, 1.2);
+    pool.target.position.set(0, 0, 0.3);
+    if (quality.level === "high") {
+      pool.castShadow = true;
+      pool.shadow.mapSize.set(1024, 1024);
+      pool.shadow.bias = -0.0008;
+    }
+    scene.add(pool, pool.target);
+    const stripMat = new THREE.MeshBasicNodeMaterial();
+    const stripFlicker = step(0.08, fract(sin(time.mul(3.1).add(positionWorld.x.mul(7.3))).mul(91.7)));
+    const stripCol = vec3(0.55, 0.78, 1.0).mul(stripFlicker.mul(2.2).add(0.2)).mul(mix(float(1), float(0.6), this.u.restore));
+    stripMat.colorNode = stripCol;
+    stripMat.mrtNode = mrt({ emissive: vec4(stripCol.mul(0.5), 1) });
+    for (let i = 0; i < 14; i += 2) {
+      const a = (i / 14) * Math.PI * 2;
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.6, 0.04), stripMat);
+      strip.position.set(Math.cos(a) * 9.02, 1.6, Math.sin(a) * 9.02);
+      scene.add(strip);
+    }
     scene.add(key, fill, coreLight);
     this.lights = { key, fill, core: coreLight };
 
@@ -360,7 +397,7 @@ export class MemoryScene extends BaseScene {
     });
     post.u.warp.value = 1;
     post.u.glitch.value = 0.12;
-    post.applyGrade({ saturation: 0.55, exposure: 1.0, bloom: 1.0, vignette: 0.55 });
+    post.applyGrade({ saturation: 0.6, exposure: 1.25, bloom: 1.0, vignette: 0.5 });
     (post.u.lift.value as THREE.Color).setRGB(0.0, 0.006, 0.012);
     (post.u.gain.value as THREE.Color).setRGB(0.9, 0.98, 1.08);
     audio.setMuffle(0.6, 2);
@@ -574,6 +611,11 @@ export class MemoryScene extends BaseScene {
       ctx.fillRect(0, 50, w, h - 90);
       text(ctx, "PROXIMITY — 12 M · IT CAME TO US", 28, h - 20, 12, "#d9a441", { spacing: 2 });
     }
+  }
+
+  beforeRender(): void {
+    if (!this.active || !this.reflection) return;
+    this.reflection.update(this.scene, this.ctx.cameras.camera, [this.water, this.dust]);
   }
 
   update(dt: number, t: number): void {

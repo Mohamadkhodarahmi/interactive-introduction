@@ -238,6 +238,18 @@ export class App {
       this.obs.setCalm();
       this.obs.signal.u.visible.value = 1;
     }
+    if (mode === "memory" || mode === "final") {
+      this.obs.exit();
+      const load = mode === "memory" ? import("../scenes/memory/MemoryScene").then((m) => new m.MemoryScene(this.ctx)) : import("../scenes/final/FinalScene").then((m) => new m.FinalScene(this.ctx));
+      load.then(async (sc) => {
+        await sc.preload();
+        sc.enter();
+        (this.director as unknown as Record<string, unknown>)[mode] = sc;
+        cameras.set(p.get("cam") ?? (mode === "memory" ? "memoryRoom" : "finalRoom"));
+        if (mode === "final") (sc as unknown as { laptopOn(s: AbortSignal): Promise<void> }).laptopOn(new AbortController().signal);
+      });
+      return;
+    }
     cameras.set(p.get("cam") ?? "observationRoom");
   }
 

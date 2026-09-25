@@ -256,6 +256,7 @@ export class ObservationScene extends BaseScene {
     L.ceiling.forEach((c) => (c.intensity = 0));
     L.console.intensity = 0;
     L.door.intensity = 0;
+    L.doorWash.intensity = 0;
     L.flash.intensity = 0;
     this.emergencyOn = 1;
     this.view.mode = "off";
@@ -637,6 +638,10 @@ export class ObservationScene extends BaseScene {
   }
 
   setDoor(state: DoorView["state"], name = ""): void {
+    if (state === "unknown") {
+      gsap.to(this.room.lights.doorWash, { intensity: 9, duration: 2.5 });
+      gsap.to(this.room.doorScreen.brightness, { value: 1, duration: 1 });
+    }
     this.door.state = state;
     this.door.since = 0;
     if (name) this.door.name = name;

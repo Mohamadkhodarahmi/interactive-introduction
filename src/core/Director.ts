@@ -265,6 +265,7 @@ export class Director {
     // ================================================================ SCENE 5 — IDENTITY
     store.set({ currentScene: "identity" });
     obs.setDoor("unknown");
+    this.grade("powered", 3);
     await ui.system("UNKNOWN USER", "bad");
     await ui.say("یه چیز دیگه مونده.");
     await wait(900, signal);

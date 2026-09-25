@@ -81,6 +81,7 @@ export interface Room {
     ceiling: THREE.SpotLight[];
     console: THREE.PointLight;
     door: THREE.PointLight;
+    doorWash: THREE.SpotLight;
     flash: THREE.DirectionalLight;
   };
   emergencyLamp: THREE.Mesh;
@@ -704,6 +705,11 @@ export function buildRoom(profile: QualityProfile, env: THREE.Texture | null, re
   const doorLight = new THREE.PointLight(0xffa860, 0, 7, 1.5);
   doorLight.position.set(R.x1 - 0.2, 1.6, DOOR.z);
   group.add(doorLight);
+  // Wall-washer over the door: off until the system asks who you are.
+  const doorWash = new THREE.SpotLight(0xdfe8f0, 0, 6, 0.75, 0.8, 1.5);
+  doorWash.position.set(R.x1 - 1.6, 3.2, DOOR.z - 0.2);
+  doorWash.target.position.set(R.x1, 1.2, DOOR.z - 0.3);
+  group.add(doorWash, doorWash.target);
   const flash = new THREE.DirectionalLight(0xc8d6ff, 0);
   flash.position.set(-10, 25, -40);
   group.add(flash);
@@ -721,7 +727,7 @@ export function buildRoom(profile: QualityProfile, env: THREE.Texture | null, re
     racks,
     drip,
     chair,
-    lights: { city, ambient, emergency, ceiling, console: consoleLight, door: doorLight, flash },
+    lights: { city, ambient, emergency, ceiling, console: consoleLight, door: doorLight, doorWash, flash },
     emergencyLamp,
     ledgeY,
   };

@@ -76,6 +76,7 @@ export class FinalScene extends BaseScene {
   private laptopState: LaptopState = "off";
   private laptopSince = 0;
   private typed = 0;
+  private revealSince = 0;
   private lights!: { lamp: THREE.SpotLight; bounce: THREE.PointLight; window: THREE.DirectionalLight; screen: THREE.PointLight; ambient: THREE.HemisphereLight };
   private steam!: THREE.Mesh;
   private lid!: THREE.Object3D;
@@ -260,8 +261,8 @@ export class FinalScene extends BaseScene {
         pad.position.set(s * 0.07, -0.01, 0);
         hp.add(pad);
       }
-      hp.rotation.set(Math.PI / 2 - 0.15, 0, 0.6);
-      hp.position.set(0.48, deskTopY + 0.05, deskZ + 0.05);
+      hp.rotation.set(0, 0.7, 0);
+      hp.position.set(0.5, deskTopY + 0.056, deskZ - 0.02);
       hp.traverse((o) => (o.castShadow = true));
       scene.add(hp);
     }
@@ -319,14 +320,14 @@ export class FinalScene extends BaseScene {
       lb.cyl(0.07, 0.08, 0.02, black, [-0.62, deskTopY + 0.01, deskZ - 0.2]);
       lb.cyl(0.008, 0.008, 0.38, alu, [-0.62, deskTopY + 0.2, deskZ - 0.2], [0.25, 0, 0.1]);
       lb.cyl(0.008, 0.008, 0.3, alu, [-0.6, deskTopY + 0.42, deskZ - 0.14], [-0.9, 0, 0.05]);
-      lb.cyl(0.02, 0.065, 0.1, black, [lampHead.x, lampHead.y, lampHead.z], [0.5, 0, 0.35]);
+      lb.cyl(0.02, 0.065, 0.1, black, [lampHead.x, lampHead.y, lampHead.z], [-0.25, 0, 0.7]);
       lb.build(scene);
       const bulbMat = new THREE.MeshBasicNodeMaterial();
       const bc = vec3(1.0, 0.72, 0.42).mul(6);
       bulbMat.colorNode = bc;
       bulbMat.mrtNode = mrt({ emissive: vec4(bc.mul(0.4), 1) });
       const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), bulbMat);
-      bulb.position.copy(lampHead).add(V(0.01, -0.035, 0.015));
+      bulb.position.copy(lampHead).add(V(0.025, -0.03, 0.01));
       scene.add(bulb);
     }
     // Plant (pot + simple leaves)
@@ -396,7 +397,7 @@ export class FinalScene extends BaseScene {
     b.build(scene);
 
     // ---------------------------------------------------------------- lights
-    const lamp = new THREE.SpotLight(0xffb070, 5, 3.2, 0.95, 0.6, 1.6);
+    const lamp = new THREE.SpotLight(0xffb070, 5, 3.2, 1.1, 1.0, 1.6);
     lamp.position.copy(lampHead);
     lamp.target.position.set(-0.15, deskTopY, deskZ + 0.1);
     lamp.castShadow = quality.shadows;
@@ -477,6 +478,7 @@ export class FinalScene extends BaseScene {
     await wait(2200, signal);
     this.laptopState = "reveal";
     this.laptopSince = 0;
+    this.revealSince = 0;
     this.typed = 0;
     await wait(3600, signal);
   }
@@ -500,7 +502,7 @@ export class FinalScene extends BaseScene {
     }
     const lines = ["UNKNOWN SYSTEM", "CREATED BY", CREATOR.nameLatin];
     const total = lines.join("").length;
-    this.typed = Math.min(total, Math.floor(s * 14));
+    this.typed = Math.min(total, Math.floor(this.revealSince * 12));
     let left = this.typed;
     const y0 = this.laptopState === "hello" ? h * 0.3 : h * 0.4;
     lines.forEach((l, i) => {
@@ -526,6 +528,7 @@ export class FinalScene extends BaseScene {
   update(dt: number, t: number): void {
     if (!this.active) return;
     this.laptopSince += dt;
+    this.revealSince += dt;
     this.laptop.update(dt);
     // Lamp filament flicker, tiny.
     this.lights.lamp.intensity *= 1;

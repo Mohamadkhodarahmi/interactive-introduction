@@ -12,7 +12,7 @@ page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
 await page.goto(url, { waitUntil: "load" });
 await page.waitForTimeout(+waitMs);
 if (js) { await page.evaluate(js); await page.waitForTimeout(1500); }
-await page.screenshot({ path: out });
+await page.screenshot({ path: out, timeout: 150000 });
 console.log(logs.slice(0, 40).join("\n"));
 console.log("ok:", await page.evaluate(() => window.__ok));
 await browser.close();
