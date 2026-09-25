@@ -87,6 +87,10 @@ export class PostFX {
     this.build();
   }
 
+  getScene(): THREE.Scene {
+    return this.scenePass.scene as THREE.Scene;
+  }
+
   setScene(scene: THREE.Scene): void {
     this.scenePass.scene = scene;
   }

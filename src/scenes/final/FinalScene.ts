@@ -439,7 +439,6 @@ export class FinalScene extends BaseScene {
       (m.material as THREE.Material | undefined)?.dispose();
     });
 
-    await renderer.compileAsync(scene, this.ctx.cameras.camera).catch(() => undefined);
     void length;
     void FA;
   }

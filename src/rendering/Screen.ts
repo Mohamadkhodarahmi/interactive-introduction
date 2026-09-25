@@ -37,8 +37,9 @@ export class Screen {
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 4;
-    this.texture.generateMipmaps = true;
-    this.texture.minFilter = THREE.LinearMipmapLinearFilter;
+    // No mipmaps: regenerating them on every repaint is a per-frame render pass.
+    this.texture.generateMipmaps = false;
+    this.texture.minFilter = THREE.LinearFilter;
 
     const c = new THREE.Color(tint);
     const mat = new THREE.MeshBasicNodeMaterial();

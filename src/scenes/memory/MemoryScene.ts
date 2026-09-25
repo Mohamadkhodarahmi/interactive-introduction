@@ -374,7 +374,6 @@ export class MemoryScene extends BaseScene {
     (panel.material as THREE.Material).dispose();
     panel.geometry.dispose();
 
-    await renderer.compileAsync(scene, this.ctx.cameras.camera).catch(() => undefined);
   }
 
   enter(): void {

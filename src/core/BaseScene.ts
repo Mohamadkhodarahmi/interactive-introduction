@@ -47,6 +47,43 @@ export abstract class BaseScene {
   /** Called after the camera has moved, right before the frame is rendered. */
   beforeRender(): void {}
 
+  /**
+   * Shader warm-up through the *real* render path (post pipeline with its MRT
+   * targets — `renderer.compileAsync` uses a different render context and does
+   * not cover it). Frustum culling is switched off so objects outside the
+   * current view (behind you when you drag-look) get their pipelines too.
+   * Renders at fade = 1, so nothing is visible.
+   */
+  async warm(prepare?: () => void): Promise<void> {
+    const { post } = this.ctx;
+    const culled: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (o.frustumCulled) {
+        culled.push(o);
+        o.frustumCulled = false;
+      }
+    });
+    const prevScene = post.getScene();
+    const prevFade = post.u.fade.value;
+    const wasActive = this.active;
+    post.setScene(this.scene);
+    post.u.fade.value = 1;
+    this.active = true;
+    try {
+      prepare?.();
+      this.beforeRender();
+      post.render();
+    } catch (err) {
+      console.warn("[warm]", err);
+    }
+    this.active = wasActive;
+    culled.forEach((o) => (o.frustumCulled = true));
+    post.u.fade.value = prevFade;
+    post.setScene(prevScene);
+    // Give async pipeline creation (WebGPU) a frame to settle.
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+  }
+
   exit(): void {
     this.active = false;
   }

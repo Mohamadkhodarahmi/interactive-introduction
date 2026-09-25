@@ -244,8 +244,7 @@ export class ObservationScene extends BaseScene {
    * stalled for about a second while shaders compiled.
    */
   private async prewarm(): Promise<void> {
-    const { renderer, post, cameras } = this.ctx;
-    const scene = this.scene;
+    const { cameras } = this.ctx;
     const cam = cameras.camera;
     cam.position.set(0.6, 1.6, 2.2);
     cam.lookAt(0, 1.3, -5);
@@ -257,21 +256,12 @@ export class ObservationScene extends BaseScene {
     L.console.intensity = L.door.intensity = L.doorWash.intensity = L.flash.intensity = 1;
     this.signal.u.visible.value = 1;
     this.signal.light.intensity = 1;
-    post.setScene(scene);
-    const prevFade = post.u.fade.value;
-    post.u.fade.value = 1;
     for (const env of [this.envPowered, this.envWarm, this.envOffline]) {
-      scene.environment = env;
-      this.refreshShadows();
-      await renderer.compileAsync(scene, cam).catch(() => undefined);
-      this.reflection?.update(scene, cam, [this.room.floor, ...this.room.glass, this.rain, this.splashes]);
-      try {
-        post.render();
-      } catch {
-        /* the real loop will report errors */
-      }
+      await this.warm(() => {
+        this.scene.environment = env;
+        this.refreshShadows();
+      });
     }
-    post.u.fade.value = prevFade;
     this.signal.light.intensity = 0;
     this.resetLook();
   }

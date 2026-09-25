@@ -42,7 +42,7 @@ allocation-sized buffers (building count) apply on the next load.
 - **Adaptive DPR:** two slow 1-second windows (<50 fps) step DPR down by 0.15; five
   comfortable windows (>58 fps) step it back up by 0.1. Grace periods after boot/scene
   switches avoid reacting to shader compilation.
-- **Warm-up:** `renderer.compileAsync(scene, camera)` for each scene during loading.
+- **Warm-up through the real pipeline:** `BaseScene.warm()` renders the scene once through the post pipeline (MRT targets, reflection pass, shadows) with frustum culling switched off and fade = 1, for every lighting/environment variant. `renderer.compileAsync` alone is not enough: it compiles for a different render context than the pass. Memory and final rooms are built and warmed while the screen is black.
 
 ## Memory / disposal
 

@@ -216,22 +216,26 @@ export class Director {
     await corruption;
     await ui.say("یه قسمت از حافظه‌م پاک شده.");
 
-    // Load the memory room (prefetched). Degrade gracefully if it fails.
+    audio.whoosh(2.2);
+    await this.fade(1, 1.6);
+    ui.systemClear();
+
+    // Build + warm the memory room while the screen is black, so it never
+    // stutters once visible. Degrade gracefully if it fails.
     let memory: MemoryScene | null = null;
     try {
       const mod = await assets.module("memory", loadMemory);
       memory = this.memory ?? new mod.MemoryScene(this.ctx);
-      this.memory = memory;
-      await memory.preload();
+      if (!this.memory) {
+        this.memory = memory;
+        await memory.preload();
+        await memory.warm();
+      }
     } catch (err) {
       console.warn("[director] memory scene unavailable", err);
       memory = null;
     }
     assets.prefetch("final", loadFinal);
-
-    audio.whoosh(2.2);
-    await this.fade(1, 1.6);
-    ui.systemClear();
     obs.clearCorruption();
     obs.exit();
     interactor.clear();
@@ -322,20 +326,23 @@ export class Director {
 
     // ================================================================ SCENE 6 — FINAL ROOM
     store.set({ currentScene: "final" });
-    let final: FinalScene | null = null;
-    try {
-      const mod = await assets.module("final", loadFinal);
-      final = this.final ?? new mod.FinalScene(this.ctx);
-      this.final = final;
-      await final.preload();
-    } catch (err) {
-      console.warn("[director] final scene unavailable", err);
-    }
     audio.whoosh(2.8);
     cameras.goTo("reveal", { duration: 3.4, ease: "power2.in" });
     await wait(1800, signal);
     this.ctx.post.u.fadeColor.value.setRGB(0.06, 0.035, 0.02);
     await this.fade(1, 1.4);
+    let final: FinalScene | null = null;
+    try {
+      const mod = await assets.module("final", loadFinal);
+      final = this.final ?? new mod.FinalScene(this.ctx);
+      if (!this.final) {
+        this.final = final;
+        await final.preload();
+        await final.warm();
+      }
+    } catch (err) {
+      console.warn("[director] final scene unavailable", err);
+    }
     obs.exit();
     interactor.clear();
     ui.systemClear();
