@@ -81,9 +81,10 @@ try {
   await waitScene("reveal", 90000);
   await page.waitForTimeout(6000);
   await shot("reveal");
-  await clickText("راه ارتباطی من", 120000);
+  await page.locator(".card a").first().waitFor({ state: "visible", timeout: 120000 });
   await page.waitForTimeout(1500);
   await shot("contact");
+  log("contact links: " + (await page.evaluate(() => [...document.querySelectorAll(".card a")].map((a) => a.href).join(" "))));
   await clickText("ادامه");
   await clickText("دوباره شروع کن", 60000);
   await shot("end");

@@ -388,6 +388,24 @@ body {
 .card a + a {
   border-top: 1px solid rgba(223, 228, 234, 0.08);
 }
+.card a .val {
+  margin-inline-start: auto;
+  margin-inline-end: 14px;
+  direction: ltr;
+}
+.card a .go {
+  color: var(--ink-faint);
+  width: 14px;
+  text-align: center;
+}
+.card a.visited .go {
+  color: var(--ok);
+}
+.card a:hover,
+.card a:focus-visible {
+  background: rgba(223, 228, 234, 0.05);
+  outline: none;
+}
 .card a span:first-child {
   color: var(--ink-faint);
   font-size: 10px;

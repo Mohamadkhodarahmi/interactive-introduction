@@ -3,7 +3,7 @@
 ```
 src/
   main.ts                 fonts + CSS, gsap wall-clock timing, boots App
-  config.ts               creator name, contact channels, optional inbox email
+  config.ts               creator name, contact channels (Telegram, GitHub)
   core/
     App.ts                renderer + systems, frame loop, replay, quality switch,
                           WebGPU→WebGL runtime fallback, dev-only ?debug= states

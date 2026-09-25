@@ -354,7 +354,10 @@ export class UI {
     return abortable(p, this.signal);
   }
 
-  /** Creator contact card. Resolves when the user continues. */
+  /**
+   * Creator contact card. Each channel opens in a new tab/app; the card stays
+   * so the visitor can come back and open another one. Resolves on `cta`.
+   */
   async contactCard(items: { label: string; value: string; href: string }[], cta: string): Promise<void> {
     this.clearActions();
     this.actions.classList.add("column");
@@ -366,48 +369,19 @@ export class UI {
       a.rel = "noopener noreferrer";
       const l = h("span", "", a);
       l.textContent = it.label;
-      const v = h("span", "", a);
+      const v = h("span", "val", a);
       v.textContent = it.value;
-      a.addEventListener("click", () => this.onClick());
+      const arrow = h("span", "go", a);
+      arrow.textContent = "↗";
+      a.addEventListener("click", () => {
+        this.onClick();
+        a.classList.add("visited");
+        arrow.textContent = "✓";
+      });
     }
     const b = h("button", "btn", this.actions);
     b.textContent = cta;
     const p = new Promise<void>((resolve) => b.addEventListener("click", async () => (await this.resolveButtons(b), resolve()), { once: true }));
-    await this.showButtons();
-    return abortable(p, this.signal);
-  }
-
-  /** Optional visitor contact. Resolves with the text, or null when skipped. */
-  async contactForm(note: string, placeholder: string, send: string, skip: string): Promise<string | null> {
-    this.clearActions();
-    this.actions.classList.add("column");
-    const field = h("div", "field", this.actions);
-    const n = h("div", "note", field);
-    n.textContent = note;
-    const ta = h("textarea", "", field);
-    ta.placeholder = placeholder;
-    ta.maxLength = 280;
-    ta.rows = 3;
-    const sendBtn = h("button", "btn primary", this.actions);
-    sendBtn.textContent = send;
-    const skipBtn = h("button", "btn ghost", this.actions);
-    skipBtn.textContent = skip;
-    const sync = () => (sendBtn.disabled = ta.value.trim().length === 0);
-    sync();
-    ta.addEventListener("input", sync);
-    const p = new Promise<string | null>((resolve) => {
-      sendBtn.addEventListener("click", async () => {
-        const v = ta.value.trim();
-        if (!v) return;
-        ta.blur();
-        await this.resolveButtons(sendBtn);
-        resolve(v);
-      });
-      skipBtn.addEventListener("click", async () => {
-        await this.resolveButtons(skipBtn);
-        resolve(null);
-      });
-    });
     await this.showButtons();
     return abortable(p, this.signal);
   }

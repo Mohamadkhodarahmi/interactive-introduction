@@ -9,21 +9,11 @@ export const CREATOR = {
   nameLatin: "MOHAMAD KHODARAHMI",
   github: "https://github.com/Mohamadkhodarahmi",
   /**
-   * Contact channels shown under «راه ارتباطی من». Empty entries are hidden.
-   * Fill these in before deploying.
+   * Contact channels shown at the end (in this order). Links open in a new tab;
+   * t.me links open the Telegram app directly on phones.
    */
   contacts: [
+    { label: "Telegram", value: "@mohammadkhodarahmi", href: "https://t.me/mohammadkhodarahmi" },
     { label: "GitHub", value: "Mohamadkhodarahmi", href: "https://github.com/Mohamadkhodarahmi" },
-    { label: "Telegram", value: "", href: "" },
-    { label: "Email", value: "", href: "" },
   ] as { label: string; value: string; href: string }[],
-  /**
-   * Where a visitor's optional contact goes.
-   * - `endpoint`: any URL that accepts a JSON POST — e.g. a Formspree form
-   *   ("https://formspree.io/f/xxxxxxx") or your own Telegram-bot worker.
-   *   Payload: { name, contact, signalChoice, interactionStyle, at }.
-   * - `email`: fallback — opens a pre-filled mail draft the visitor sends.
-   * With neither set, the note is only kept on the visitor's device.
-   */
-  inbox: { endpoint: "", email: "" },
 };

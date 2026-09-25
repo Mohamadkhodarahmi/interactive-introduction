@@ -25,9 +25,7 @@ Edit `src/config.ts`:
 
 - `CREATOR.name` — the name used in «من … هستم».
 - `CREATOR.nameLatin` — shown on the laptop.
-- `CREATOR.contacts` — channels under «راه ارتباطی من» (empty ones are hidden).
-- `CREATOR.inbox.email` — optional. v1 has no backend: if set, a visitor's optional contact
-  opens a pre-filled mail draft; otherwise it's only kept on the visitor's device.
+- `CREATOR.contacts` — channels shown at the end (Telegram, GitHub…). The card stays open so visitors can open one, come back and open another.
 
 ## URL options
 

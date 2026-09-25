@@ -391,29 +391,13 @@ export class Director {
     store.completeScene("reveal");
 
     // ================================================================ CONTACT
+    // Written for a public link: anyone who reaches the end can say hello back.
     store.set({ currentScene: "contact" });
     await ui.say("اگه این چند دقیقه برات جالب بود...");
-    await ui.say("می‌تونیم مرحله بعدیش رو بیرون از اینجا ادامه بدیم :)", { keep: true });
-    const contact = await ui.choose(
-      [
-        { id: "mine", label: "راه ارتباطی من" },
-        { id: "yours", label: "راه ارتباطی خودم رو بذارم" },
-      ],
-      { column: true },
-    );
+    await ui.say("بیرون از اینجا هم هستم. هر وقت خواستی، یه «سلام» بفرست :)", { keep: true });
+    // The card stays open: visitors can open one channel, come back and open another.
+    await ui.contactCard(CREATOR.contacts, "ادامه");
     await ui.clearSay();
-    if (contact === "mine") {
-      await ui.contactCard(CREATOR.contacts, "ادامه");
-    } else {
-      await ui.say("اختیاریه :) اگه راحت نیستی، لازم نیست چیزی بذاری.", { keep: true });
-      const left = await ui.contactForm("", "تلگرام، اینستاگرام، ایمیل... هر چی راحتی", "بفرست", "رد شدن");
-      await ui.clearSay();
-      if (left) {
-        const sent = await this.deliverContact(name, left);
-        audio.confirm();
-        await ui.say(sent ? "رسید. ممنون :)" : "ذخیره شد، ولی الان نرسید... ممنون که گذاشتی :)");
-      }
-    }
     store.completeScene("contact");
 
     // ================================================================ FINAL STATE
@@ -421,50 +405,6 @@ export class Director {
     await ui.say("خب... مأموریت انجام شد.");
     await ui.say("مرسی که تا آخرش اومدی :)", { keep: true });
     await ui.finale("دوباره شروع کن", CREATOR.github ? { label: "GITHUB", href: CREATOR.github } : undefined);
-  }
-
-  /**
-   * Visitor contact: POSTed as JSON to `CREATOR.inbox.endpoint` when configured
-   * (Formspree, a Telegram-bot worker, etc.). Always also kept on the device so
-   * nothing is lost if the request fails; optional mail draft as a last resort.
-   */
-  private async deliverContact(name: string, contact: string): Promise<boolean> {
-    const st = this.ctx.store.get();
-    const payload = {
-      name,
-      contact,
-      signalChoice: st.signalChoice,
-      interactionStyle: st.interactionStyle,
-      at: new Date().toISOString(),
-    };
-    try {
-      localStorage.setItem("unknown-system:contact", JSON.stringify(payload));
-    } catch {
-      /* ignore */
-    }
-    const { endpoint, email } = CREATOR.inbox;
-    if (endpoint) {
-      try {
-        const ctl = new AbortController();
-        const timer = window.setTimeout(() => ctl.abort(), 8000);
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(payload),
-          signal: ctl.signal,
-        });
-        clearTimeout(timer);
-        if (res.ok) return true;
-      } catch (err) {
-        console.warn("[contact] send failed", err);
-      }
-    }
-    if (email) {
-      const body = encodeURIComponent(`${name}\n${contact}`);
-      window.open(`mailto:${email}?subject=${encodeURIComponent("UNKNOWN SYSTEM")}&body=${body}`, "_blank");
-      return true;
-    }
-    return false;
   }
 
   /**
