@@ -131,6 +131,18 @@ export class Interactor {
     this.dragging = false;
   };
 
+  /** QA helper: screen position (px) of a hotspot's centre, or null. */
+  screenPos(id: string): { x: number; y: number } | null {
+    const h = this.get(id);
+    if (!h) return null;
+    const box = new THREE.Box3();
+    h.objects.forEach((o) => box.expandByObject(o));
+    const c = h.anchor?.clone() ?? box.getCenter(new THREE.Vector3());
+    c.project(this.camera);
+    const rect = this.el.getBoundingClientRect();
+    return { x: rect.left + (c.x * 0.5 + 0.5) * rect.width, y: rect.top + (-c.y * 0.5 + 0.5) * rect.height };
+  }
+
   dispose(): void {
     this.el.removeEventListener("pointerdown", this.pointerDown);
     this.el.removeEventListener("pointermove", this.pointerMove);

@@ -74,7 +74,7 @@ export class ObservationScene extends BaseScene {
       look: { yaw: 0.5, pitch: 0.3 },
     },
     signal: {
-      position: V(0.5, 1.58, -0.8),
+      position: V(0.5, 1.72, -0.9),
       target: V(-40, 10, -200),
       fov: 42,
       sway: 0.008,
@@ -134,7 +134,7 @@ export class ObservationScene extends BaseScene {
   private breakerDone = false;
   private powered = false;
   /** Signal is far out over the city by default; ignore branch brings it close. */
-  signalFar = V(-210, 70, -1100);
+  signalFar = V(-190, 150, -1100);
   signalNear = V(-1.1, 2.2, -8.2);
   private signalLight = 0;
   private screensEnabled = true;
@@ -179,7 +179,7 @@ export class ObservationScene extends BaseScene {
     this.city = buildCity(quality);
     scene.add(this.city.group);
 
-    if (quality.level !== "low") {
+    if (quality.level !== "low" && !new URLSearchParams(location.search).has("norefl")) {
       this.reflection = new PlanarReflection(renderer, 0.001, quality.level === "high" ? 0.5 : 0.35);
       const tex = this.reflection.target.texture;
       this.onDispose(() => this.reflection?.dispose());

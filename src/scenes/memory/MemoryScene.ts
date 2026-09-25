@@ -98,7 +98,6 @@ export class MemoryScene extends BaseScene {
   private coreMode: "idle" | "replay" | "done" = "idle";
   private coreSince = 0;
   private choice: SignalChoice = "investigate";
-  private pendingTap: ((i: number) => void) | null = null;
 
   constructor(ctx: AppContext) {
     super(ctx);
@@ -108,7 +107,7 @@ export class MemoryScene extends BaseScene {
     const scene = this.scene;
     const { quality, renderer } = this.ctx;
     scene.background = new THREE.Color(0x020303);
-    const fogDensity = uniform(0.055);
+    const fogDensity = uniform(0.04);
     scene.fogNode = fog(color(0x06080a), densityFogFactor(fogDensity));
     this.onDispose(() => void fogDensity);
 
@@ -311,14 +310,14 @@ export class MemoryScene extends BaseScene {
     }
 
     // --- light: cold key from above, fill, core glow
-    const key = new THREE.PointLight(0x9fc4e0, 22, 18, 1.6);
+    const key = new THREE.PointLight(0x9fc4e0, 140, 22, 1.7);
     key.position.set(1.5, 6, 2);
     key.castShadow = quality.shadows;
     if (key.castShadow) {
       key.shadow.mapSize.set(quality.shadowMapSize / 2, quality.shadowMapSize / 2);
       key.shadow.bias = -0.001;
     }
-    const fill = new THREE.HemisphereLight(0x223040, 0x050505, 0.4);
+    const fill = new THREE.HemisphereLight(0x2a3a4c, 0x080808, 0.9);
     const coreLight = new THREE.PointLight(0xbfe0ff, 3, 8, 1.8);
     coreLight.position.set(0, 2.1, 0.8);
     scene.add(key, fill, coreLight);
@@ -379,17 +378,6 @@ export class MemoryScene extends BaseScene {
     await ui.system("FRAGMENTS RECOVERABLE  0 / 3", "warn");
     await ui.say("این‌ها تیکه‌هایی از چیزاییه که با هم دیدیم.");
 
-    interactor.clear();
-    this.fragments.forEach((f) => {
-      interactor.add({
-        id: `frag${f.id}`,
-        objects: [f.group],
-        enabled: true,
-        onTap: () => this.pendingTap?.(f.id),
-      });
-    });
-    // Revisiting a restored fragment is noted (exploration signal).
-    const order: number[] = [];
     let hintTimer = 0;
     const scheduleHint = () => {
       clearTimeout(hintTimer);
@@ -398,30 +386,44 @@ export class MemoryScene extends BaseScene {
         if (next) ui.hint(next.group.position);
       }, 7000);
     };
-    scheduleHint();
-    signal.addEventListener("abort", () => clearTimeout(hintTimer));
 
-    while (this.restoredCount < 3) {
-      const id = await new Promise<number>((resolve, reject) => {
-        this.pendingTap = resolve;
-        signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    // Taps are handled immediately (several fragments can be in flight at once);
+    // tapping an already-restored fragment counts as a revisit.
+    await new Promise<void>((resolve, reject) => {
+      let done = 0;
+      signal.addEventListener("abort", () => {
+        clearTimeout(hintTimer);
+        reject(new Error("aborted"));
+      }, { once: true });
+      interactor.clear();
+      this.fragments.forEach((f) => {
+        interactor.add({
+          id: `frag${f.id}`,
+          objects: [f.group],
+          enabled: true,
+          onTap: () => {
+            if (f.restored) {
+              store.metrics.revisits++;
+              audio.fragment(f.id);
+              return;
+            }
+            ui.hint(null);
+            interactor.setEnabled(`frag${f.id}`, false);
+            this.restoreFragment(f, signal).then(() => {
+              done++;
+              if (done === 1) ui.say("یکی دیگه...").catch(() => undefined);
+              if (done === 3) resolve();
+              else scheduleHint();
+            });
+          },
+        });
       });
-      const f = this.fragments[id];
-      if (f.restored) {
-        store.metrics.revisits++;
-        audio.fragment(id);
-        continue;
-      }
-      ui.hint(null);
-      order.push(id);
-      await this.restoreFragment(f, signal);
       scheduleHint();
-      if (this.restoredCount === 1) await ui.say("یکی دیگه...");
-    }
+    });
     clearTimeout(hintTimer);
     ui.hint(null);
     interactor.clear();
-    this.pendingTap = null;
+    await wait(600, signal);
 
     // Final replay on the core display — depends on the earlier choice.
     this.coreMode = "replay";
@@ -604,6 +606,6 @@ export class MemoryScene extends BaseScene {
       f.screen.update(dt);
     }
     this.core.update(dt);
-    this.lights.key.intensity = 18 + Math.sin(t * 13) * (1 - r) * 3 + (Math.random() < 0.01 * (1 - r) ? -12 : 0);
+    this.lights.key.intensity = 140 + Math.sin(t * 13) * (1 - r) * 15 + (Math.random() < 0.01 * (1 - r) ? -90 : 0);
   }
 }

@@ -52,7 +52,7 @@ export class Screen {
       const d = length(p.sub(0.5).mul(vec2(1.0, 1.2)));
       const vig = smoothstep(float(0.85), float(0.35), d);
       const n = hash(floor(p.mul(vec2(width / 2, height / 2))).dot(vec2(1, 173)).add(floor(time.mul(24)).mul(7.1)));
-      const noisy = mix(img, vec3(n).mul(0.5), this.noise);
+      const noisy = mix(img, vec3(n).mul(0.22), this.noise);
       const glass = vec3(0.004, 0.005, 0.006);
       const lit = noisy.mul(vec3(c.r, c.g, c.b)).mul(scan).mul(roll).mul(vig.mul(0.35).add(0.65)).mul(this.brightness);
       return mix(glass, lit.mul(1.4), this.power);

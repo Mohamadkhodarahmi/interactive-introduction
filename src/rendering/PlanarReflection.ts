@@ -1,5 +1,5 @@
 import * as THREE from "three/webgpu";
-import { screenUV, texture } from "three/tsl";
+import { emissive, mrt, output, screenUV, texture, vec4 } from "three/tsl";
 
 const _n = new THREE.Vector3(0, 1, 0);
 const _pos = new THREE.Vector3();
@@ -25,6 +25,7 @@ export class PlanarReflection {
   /** Sample this in materials: already mirrored in X. */
   readonly node;
   enabled = true;
+  private mrt = mrt({ output, emissive: vec4(emissive, output.a) });
   /** Render every N frames (1 = every frame). */
   frameSkip = 1;
   private frame = 0;
@@ -34,7 +35,11 @@ export class PlanarReflection {
     private y: number,
     private scale = 0.5,
   ) {
-    this.target = new THREE.RenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: true });
+    // Two attachments so materials with a per-material MRT (emissive) compile the
+    // same way as in the main pass.
+    this.target = new THREE.RenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: true, count: 2 });
+    this.target.textures[0].name = "output";
+    this.target.textures[1].name = "emissive";
     this.target.texture.generateMipmaps = false;
     this.target.texture.minFilter = THREE.LinearFilter;
     this.target.texture.magFilter = THREE.LinearFilter;
@@ -96,7 +101,7 @@ export class PlanarReflection {
     const prevTarget = r.getRenderTarget();
     const prevMRT = r.getMRT();
     const prevAuto = r.autoClear;
-    r.setMRT(null);
+    r.setMRT(this.mrt);
     r.setRenderTarget(this.target);
     r.autoClear = true;
     r.render(scene, vc);
