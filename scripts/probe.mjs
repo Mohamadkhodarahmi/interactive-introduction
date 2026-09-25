@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+const [url, waitMs = "8000", js = "0"] = process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const logs = [];
+page.on("console", (m) => { if (!m.text().includes("vite")) logs.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
+page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
+await page.goto(url, { waitUntil: "load" });
+await page.waitForTimeout(+waitMs);
+console.log(await page.evaluate(js));
+console.log(logs.slice(0, 30).join("\n"));
+await browser.close();
